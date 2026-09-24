@@ -1,0 +1,9 @@
+[03/02/2026, 18:12:04] Alex: Hey, saving this for the weekend
+[03/02/2026, 18:12:31] Alex: https://cooking.nytimes.com/recipes/1000001-test-lemon-chicken-thighs?utm_source=share&smid=ck-recipe-ios-share
+[03/02/2026, 19:40:00] Sam: looks good! also this one
+[03/02/2026, 19:40:12] Sam: https://cooking.nytimes.com/recipes/1000002-test-cabbage-soup
+[04/02/2026, 08:01:00] Alex: same link again https://www.cooking.nytimes.com/recipes/1000001-test-lemon-chicken-thighs
+[04/02/2026, 08:02:00] Sam: and a non-recipe https://example.com/blog/knife-skills
+[04/02/2026, 08:03:00] Sam: multi-line message
+continues here with no timestamp
+[05/02/2026, 12:00:00] Alex: 👍

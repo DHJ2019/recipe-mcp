@@ -1,0 +1,33 @@
+# Local secrets and machine-specific config
+.env
+.env.*
+!.env.example
+
+# Private household data, browser sessions, temporary media
+.private/
+playwright/.auth/
+
+# Local databases
+data/*.db
+data/*.db-*
+
+# Test and tool output
+test-results/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+
+# Editors and OS
+.DS_Store
+.idea/
+.vscode/

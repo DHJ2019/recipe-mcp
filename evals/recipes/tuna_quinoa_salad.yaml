@@ -1,0 +1,13 @@
+# Personal recipe fixture from SPEC.md section 8.2. The draft must not invent
+# preparation time or a seasoning; the note is preserved as a reminder.
+input: "Tuna salad with tomato, quinoa, cucumber, arugula and seeds. Need to season the tuna."
+expected:
+  title_contains: [tuna, salad]
+  ingredients: [tuna, tomato, quinoa, cucumber, arugula, seeds]
+  dietary_suitability: [pescatarian]
+  dietary_not: [vegetarian, vegan]
+  dish_type: salad
+  total_minutes: null
+  status: draft
+  notes_contain: ["season the tuna"]
+  must_not_contain: ["salt", "pepper", "olive oil", "lemon", "minutes"]

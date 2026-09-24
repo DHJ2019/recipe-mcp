@@ -1,0 +1,56 @@
+# Pantry staples: ingredients assumed to be on hand. They are excluded from
+# "missing ingredient" counts when ranking. Edit freely; `make categorize`
+# re-applies the list to stored ingredients. Names are canonical (lowercase,
+# singular unless naturally plural) as produced by ingredient normalization.
+staples:
+  - salt
+  - pepper
+  - black pepper
+  - salt and pepper
+  - kosher salt
+  - sea salt
+  - flaky salt
+  - olive oil
+  - vegetable oil
+  - neutral oil
+  - oil
+  - sesame oil
+  - water
+  - sugar
+  - brown sugar
+  - flour
+  - garlic
+  - onion
+  - shallot
+  - butter
+  - soy sauce
+  - vinegar
+  - rice vinegar
+  - white wine vinegar
+  - red wine vinegar
+  - balsamic vinegar
+  - lemon
+  - lime
+  - stock
+  - chicken stock
+  - honey
+  - mustard
+  - chili flakes
+  - red pepper flakes
+  - cumin
+  - paprika
+  - turmeric
+  - curry powder
+  - oregano
+  - dried oregano
+  - thyme
+  - dried thyme
+  - bay leaf
+  - bay leaves
+  - cinnamon
+  - rice
+  - pasta
+  - eggs
+  - cornstarch
+  - baking powder
+  - baking soda

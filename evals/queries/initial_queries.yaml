@@ -1,0 +1,63 @@
+# The 10 initial recommendation requests from SPEC.md section 18, with the typed
+# constraints the model is expected to extract and the synthetic recipes that
+# should appear in the top three. `expected_constraints` is checked against the
+# offline fake model; live model extraction is compared by `make smoke`.
+queries:
+  - id: q01
+    text: Something cozy under 45 minutes.
+    constraints: {character: [cozy], max_minutes: 45}
+    expected_constraints: {character: [cozy], max_minutes: 45}
+    expected_any: [Thai Pumpkin Soup, Weeknight Chicken Noodle Soup, Cabbage and White Bean Soup, Cauliflower Dal]
+
+  - id: q02
+    text: A healthy salmon dinner.
+    constraints: {character: [light], available_ingredients: [salmon]}
+    expected_constraints: {character: [light]}
+    expected_any: [Miso-Glazed Salmon with Roasted Cabbage, Salmon and Carrot Sheet-Pan Dinner]
+
+  - id: q03
+    text: Vegetarian Thai food.
+    constraints: {dietary: [vegetarian], cuisine: thai}
+    expected_constraints: {dietary: [vegetarian], cuisine: thai}
+    expected_any: [Thai Green Curry with Tofu, Thai Pumpkin Soup, Pad Thai with Tofu]
+
+  - id: q04
+    text: A soup using cabbage.
+    constraints: {dish_type: soup, available_ingredients: [cabbage]}
+    expected_constraints: {dish_type: soup, available_ingredients: [cabbage]}
+    expected_any: [Cabbage and White Bean Soup]
+
+  - id: q05
+    text: Something light but satisfying.
+    constraints: {character: [light]}
+    expected_constraints: {character: [light]}
+    expected_any: [Lemony Chickpea Salad with Cucumber and Feta, Miso-Glazed Salmon with Roasted Cabbage, Cauliflower Dal, Salmon and Carrot Sheet-Pan Dinner]
+
+  - id: q06
+    text: Dinner using the ingredients visible in this photograph.
+    skip: photo input arrives in Stage 4
+    constraints: {}
+
+  - id: q07
+    text: Something both household members like.
+    constraints: {diners: household}
+    expected_constraints: {for_household: true}
+    expected_any: [Thai Pumpkin Soup, Lemony Chickpea Salad with Cucumber and Feta]
+
+  - id: q08
+    text: A recipe requiring no more than two missing ingredients. We have salmon, cabbage and carrots.
+    constraints: {available_ingredients: [salmon, cabbage, carrots], max_missing: 2}
+    expected_constraints: {available_ingredients: [salmon, cabbage, carrots], max_missing: 2}
+    expected_any: [Miso-Glazed Salmon with Roasted Cabbage, Salmon and Carrot Sheet-Pan Dinner]
+
+  - id: q09
+    text: Something quick that has not been cooked recently.
+    constraints: {max_minutes: 30, exclude_recent_days: 14}
+    expected_constraints: {max_minutes: 30, exclude_recent: true}
+    expected_any: [Lemony Chickpea Salad with Cucumber and Feta, Spicy Garlic Shrimp Stir-Fry, Caprese Sandwich, Miso-Glazed Salmon with Roasted Cabbage, Pad Thai with Tofu]
+
+  - id: q10
+    text: A richer weekend meal.
+    constraints: {character: [rich]}
+    expected_constraints: {character: [rich]}
+    expected_any: [Red Wine Braised Beef Short Ribs, Mushroom Risotto, Thai Green Curry with Tofu]

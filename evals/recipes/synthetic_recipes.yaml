@@ -1,0 +1,396 @@
+# Synthetic demonstration recipes. Titles, ingredients and classifications are
+# invented for this repository; source URLs point at example.com. Nothing here is
+# NYT Cooking content or private household data. Dietary suitability is always
+# derived from ingredient rules and is therefore not listed.
+recipes:
+  - title: Thai Pumpkin Soup
+    source_type: other
+    source_url: https://example.com/recipes/thai-pumpkin-soup
+    servings: 4
+    total_minutes: 40
+    ingredients:
+      - 1 kg pumpkin, peeled and cubed
+      - 1 can coconut milk
+      - 2 tablespoons red curry paste
+      - 1 onion, chopped
+      - 2 cloves garlic
+      - 1 tablespoon grated ginger
+      - 3 cups vegetable stock
+      - 1 lime, juiced
+      - fresh cilantro
+      - salt
+    classifications:
+      cuisine: thai
+      dish_type: soup
+      meal: [dinner]
+      primary_ingredient: [pumpkin]
+      character: [cozy, spicy]
+      cooking_method: other
+      health_orientation: balanced
+
+  - title: Miso-Glazed Salmon with Roasted Cabbage
+    source_type: other
+    source_url: https://example.com/recipes/miso-salmon-roasted-cabbage
+    servings: 2
+    total_minutes: 30
+    ingredients:
+      - 2 salmon fillets
+      - 1/2 head green cabbage, cut into wedges
+      - 2 tablespoons white miso
+      - 1 tablespoon honey
+      - 1 tablespoon soy sauce
+      - 1 tablespoon sesame oil
+      - 2 scallions, sliced
+      - sesame seeds
+    classifications:
+      cuisine: japanese
+      dish_type: roast
+      meal: [dinner]
+      primary_ingredient: [salmon, cabbage]
+      character: [light, bright]
+      cooking_method: roast
+      health_orientation: light
+
+  - title: Cabbage and White Bean Soup
+    source_type: other
+    source_url: https://example.com/recipes/cabbage-white-bean-soup
+    servings: 6
+    total_minutes: 45
+    ingredients:
+      - 1/2 head savoy cabbage, shredded
+      - 2 cans white beans, drained
+      - 2 carrots, diced
+      - 2 stalks celery, diced
+      - 1 onion, chopped
+      - 3 cloves garlic
+      - 6 cups vegetable stock
+      - 2 tablespoons olive oil
+      - 1 teaspoon dried thyme
+      - salt and pepper
+    classifications:
+      cuisine: italian
+      dish_type: soup
+      meal: [dinner, lunch]
+      primary_ingredient: [cabbage, white beans]
+      character: [cozy, light]
+      cooking_method: other
+      health_orientation: light
+
+  - title: Thai Green Curry with Tofu
+    source_type: other
+    source_url: https://example.com/recipes/thai-green-curry-tofu
+    servings: 4
+    total_minutes: 35
+    ingredients:
+      - 400 g firm tofu, cubed
+      - 3 tablespoons green curry paste
+      - 1 can coconut milk
+      - 1 red bell pepper, sliced
+      - 200 g green beans
+      - 1 tablespoon soy sauce
+      - 1 teaspoon sugar
+      - thai basil
+      - jasmine rice, for serving
+    classifications:
+      cuisine: thai
+      dish_type: curry
+      meal: [dinner]
+      primary_ingredient: [tofu]
+      character: [spicy, rich]
+      cooking_method: other
+      health_orientation: balanced
+
+  - title: Weeknight Chicken Noodle Soup
+    source_type: other
+    source_url: https://example.com/recipes/weeknight-chicken-noodle-soup
+    servings: 4
+    total_minutes: 40
+    ingredients:
+      - 2 boneless skinless chicken thighs
+      - 200 g egg noodles
+      - 2 carrots, sliced
+      - 2 stalks celery, sliced
+      - 1 onion, diced
+      - 6 cups chicken stock
+      - 2 tablespoons olive oil
+      - fresh parsley
+      - salt and pepper
+    classifications:
+      cuisine: american
+      dish_type: soup
+      meal: [dinner]
+      primary_ingredient: [chicken]
+      character: [cozy]
+      cooking_method: other
+      health_orientation: balanced
+
+  - title: Red Wine Braised Beef Short Ribs
+    source_type: other
+    source_url: https://example.com/recipes/braised-beef-short-ribs
+    servings: 4
+    total_minutes: 180
+    ingredients:
+      - 1.5 kg beef short ribs
+      - 2 cups red wine
+      - 2 cups beef stock
+      - 2 carrots, chopped
+      - 1 onion, chopped
+      - 4 cloves garlic
+      - 2 tablespoons tomato paste
+      - 2 tablespoons butter
+      - fresh thyme
+      - salt and pepper
+    classifications:
+      cuisine: french
+      dish_type: stew
+      meal: [dinner]
+      primary_ingredient: [beef]
+      character: [rich, cozy]
+      cooking_method: braise
+      health_orientation: rich
+
+  - title: Lemony Chickpea Salad with Cucumber and Feta
+    source_type: other
+    source_url: https://example.com/recipes/lemony-chickpea-salad
+    servings: 2
+    total_minutes: 15
+    ingredients:
+      - 1 can chickpeas, rinsed
+      - 1 cucumber, diced
+      - 100 g feta, crumbled
+      - 1 lemon, juiced
+      - 3 tablespoons olive oil
+      - fresh parsley
+      - fresh mint
+      - salt and pepper
+    classifications:
+      cuisine: mediterranean
+      dish_type: salad
+      meal: [lunch, dinner]
+      primary_ingredient: [chickpeas]
+      character: [fresh, bright, light]
+      cooking_method: no-cook
+      health_orientation: light
+
+  - title: Spicy Garlic Shrimp Stir-Fry
+    source_type: other
+    source_url: https://example.com/recipes/spicy-garlic-shrimp-stir-fry
+    servings: 2
+    total_minutes: 20
+    ingredients:
+      - 400 g shrimp, peeled
+      - 4 cloves garlic, minced
+      - 1 red bell pepper, sliced
+      - 2 tablespoons soy sauce
+      - 1 tablespoon chili flakes
+      - 1 tablespoon vegetable oil
+      - 2 scallions
+      - cooked rice, for serving
+    classifications:
+      cuisine: other
+      dish_type: stir-fry
+      meal: [dinner]
+      primary_ingredient: [shrimp]
+      character: [spicy, bright]
+      cooking_method: other
+      health_orientation: balanced
+
+  - title: Mushroom Risotto
+    source_type: other
+    source_url: https://example.com/recipes/mushroom-risotto
+    servings: 4
+    total_minutes: 50
+    ingredients:
+      - 300 g arborio rice
+      - 400 g mushrooms, sliced
+      - 1 onion, finely chopped
+      - 2 cloves garlic
+      - 1/2 cup white wine
+      - 5 cups vegetable stock
+      - 60 g parmesan, grated
+      - 3 tablespoons butter
+      - fresh parsley
+      - salt and pepper
+    classifications:
+      cuisine: italian
+      dish_type: rice dish
+      meal: [dinner]
+      primary_ingredient: [mushroom]
+      character: [rich, cozy]
+      cooking_method: other
+      health_orientation: rich
+
+  - title: Pad Thai with Tofu
+    source_type: other
+    source_url: https://example.com/recipes/pad-thai-tofu
+    servings: 2
+    total_minutes: 30
+    ingredients:
+      - 200 g rice noodles
+      - 200 g firm tofu, cubed
+      - 2 eggs
+      - 2 tablespoons tamarind paste
+      - 2 tablespoons soy sauce
+      - 1 tablespoon sugar
+      - 2 cups bean sprouts
+      - 1/4 cup roasted peanuts, crushed
+      - 2 scallions
+      - 1 lime
+    classifications:
+      cuisine: thai
+      dish_type: noodle dish
+      meal: [dinner]
+      primary_ingredient: [tofu]
+      character: [bright]
+      cooking_method: other
+      health_orientation: balanced
+
+  - title: Salmon and Carrot Sheet-Pan Dinner
+    source_type: other
+    source_url: https://example.com/recipes/salmon-carrot-sheet-pan
+    servings: 2
+    total_minutes: 35
+    ingredients:
+      - 2 salmon fillets
+      - 4 carrots, cut into batons
+      - 300 g baby potatoes, halved
+      - 2 tablespoons olive oil
+      - 1 lemon
+      - fresh dill
+      - salt and pepper
+    classifications:
+      cuisine: american
+      dish_type: roast
+      meal: [dinner]
+      primary_ingredient: [salmon]
+      character: [light, fresh]
+      cooking_method: roast
+      health_orientation: light
+
+  - title: Korean Beef Bowls
+    source_type: other
+    source_url: https://example.com/recipes/korean-beef-bowls
+    servings: 4
+    total_minutes: 25
+    ingredients:
+      - 500 g ground beef
+      - 2 tablespoons gochujang
+      - 3 tablespoons soy sauce
+      - 1 tablespoon sesame oil
+      - 3 cloves garlic
+      - 1 tablespoon grated ginger
+      - cooked rice, for serving
+      - 2 scallions
+      - sesame seeds
+    classifications:
+      cuisine: korean
+      dish_type: rice dish
+      meal: [dinner]
+      primary_ingredient: [beef]
+      character: [spicy]
+      cooking_method: other
+      health_orientation: balanced
+
+  - title: Cauliflower Dal
+    source_type: other
+    source_url: https://example.com/recipes/cauliflower-dal
+    servings: 4
+    total_minutes: 40
+    ingredients:
+      - 1 cup red lentils
+      - 1 small cauliflower, cut into florets
+      - 1 onion, chopped
+      - 3 cloves garlic
+      - 1 tablespoon grated ginger
+      - 1 teaspoon turmeric
+      - 1 teaspoon cumin
+      - 1 teaspoon garam masala
+      - 1 can canned tomatoes
+      - fresh cilantro
+      - salt
+    classifications:
+      cuisine: indian
+      dish_type: curry
+      meal: [dinner]
+      primary_ingredient: [red lentils, cauliflower]
+      character: [cozy, spicy, light]
+      cooking_method: other
+      health_orientation: light
+
+  - title: Caprese Sandwich
+    source_type: other
+    source_url: https://example.com/recipes/caprese-sandwich
+    servings: 2
+    total_minutes: 10
+    ingredients:
+      - 1 ciabatta loaf
+      - 200 g fresh mozzarella, sliced
+      - 2 ripe tomatoes, sliced
+      - fresh basil
+      - 2 tablespoons olive oil
+      - balsamic vinegar
+      - salt and pepper
+    classifications:
+      cuisine: italian
+      dish_type: sandwich
+      meal: [lunch]
+      primary_ingredient: [mozzarella, tomato]
+      character: [fresh, light]
+      cooking_method: no-cook
+      health_orientation: balanced
+
+  - title: Tuna Quinoa Salad
+    source_type: personal
+    status: draft
+    servings: null
+    total_minutes: null
+    ingredients:
+      - tuna
+      - tomato
+      - quinoa
+      - cucumber
+      - arugula
+      - seeds
+    notes:
+      - Season the tuna before assembling
+    classifications:
+      cuisine: other
+      dish_type: salad
+      meal: [lunch]
+      primary_ingredient: [tuna]
+      character: [light, fresh]
+      cooking_method: no-cook
+      health_orientation: light
+
+# Demo ratings for the synthetic household (members Alex and Sam). cooked_at is
+# deliberately old so "not cooked recently" queries still return results.
+feedback:
+  - recipe: Thai Pumpkin Soup
+    member: Alex
+    sentiment: love
+    cooked_at: "2026-06-02T19:00:00+00:00"
+  - recipe: Thai Pumpkin Soup
+    member: Sam
+    sentiment: like
+    cooked_at: "2026-06-02T19:00:00+00:00"
+  - recipe: Lemony Chickpea Salad with Cucumber and Feta
+    member: Alex
+    sentiment: like
+    cooked_at: "2026-07-14T19:00:00+00:00"
+  - recipe: Lemony Chickpea Salad with Cucumber and Feta
+    member: Sam
+    sentiment: love
+    cooked_at: "2026-07-14T19:00:00+00:00"
+  - recipe: Korean Beef Bowls
+    member: Alex
+    sentiment: love
+    cooked_at: "2026-08-20T19:00:00+00:00"
+  - recipe: Korean Beef Bowls
+    member: Sam
+    sentiment: dislike
+    notes: too sweet
+    cooked_at: "2026-08-20T19:00:00+00:00"
+  - recipe: Mushroom Risotto
+    member: Sam
+    sentiment: like
+    cooked_at: "2026-05-10T19:00:00+00:00"
