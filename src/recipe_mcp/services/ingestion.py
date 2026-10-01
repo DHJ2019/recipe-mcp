@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from recipe_mcp.adapters.nyt.fetcher import FetchError, RecipeFetcher, TitleFetcher
 from recipe_mcp.adapters.nyt.jsonld import ParsedRecipe, parse_recipe_jsonld
 from recipe_mcp.db.repositories import RecipeRepository
-from recipe_mcp.domain import dietary, taxonomy
+from recipe_mcp.domain import dietary, limits, taxonomy
 from recipe_mcp.domain.ingredients import normalize_ingredients
 from recipe_mcp.domain.models import Classification, FacetSource, Recipe, RecipeStatus, SourceType
 from recipe_mcp.domain.taxonomy import Facet
@@ -82,6 +82,11 @@ class IngestionService:
         self.household_id = household_id
 
     def save(self, text: str, notes: str | None = None, member_id: int | None = None) -> SaveResult:
+        try:
+            limits.check_text("input", text, limits.MAX_INPUT_CHARS)
+            limits.check_text("notes", notes, limits.MAX_NOTE_CHARS)
+        except limits.InputTooLarge as exc:
+            raise IngestionError(str(exc)) from exc
         urls = extract_urls(text)
         if urls and (looks_like_url(text) or classify_url(urls[0]) != UrlKind.OTHER):
             return self.save_url(urls[0], notes=notes, member_id=member_id)
@@ -190,6 +195,13 @@ class IngestionService:
         agent: str = "agent",
     ) -> SaveResult:
         """Save a recipe an MCP client agent has already parsed. No model is involved."""
+        try:
+            limits.check_recipe_fields(
+                title=title, ingredients=ingredients, notes=notes or [], servings=servings
+            )
+            limits.check_facets("classifications", classifications)
+        except limits.InputTooLarge as exc:
+            raise IngestionError(str(exc)) from exc
         cleaned = [i.strip() for i in ingredients if i and i.strip()]
         if not title.strip():
             raise IngestionError("title is required")

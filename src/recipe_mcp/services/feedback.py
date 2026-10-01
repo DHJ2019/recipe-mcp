@@ -6,6 +6,7 @@ import re
 
 from recipe_mcp.db.repositories import FeedbackRepository, MemberRepository, RecipeRepository
 from recipe_mcp.domain import feedback as feedback_rules
+from recipe_mcp.domain import limits
 from recipe_mcp.domain.models import Feedback, FeedbackSummary, Sentiment, utcnow_iso
 
 _SENTIMENT_PATTERNS: list[tuple[Sentiment, re.Pattern[str]]] = [
@@ -55,6 +56,7 @@ class FeedbackService:
     ) -> FeedbackSummary:
         """Store feedback for ``member_id``. When one member reports another's opinion,
         ``reported_by_member_id`` records who said it so the distinction is auditable."""
+        limits.check_text("notes", notes, limits.MAX_NOTE_CHARS)
         if self.recipes.get(recipe_id) is None:
             raise LookupError(f"recipe {recipe_id} not found")
         if self.members.get(member_id) is None:

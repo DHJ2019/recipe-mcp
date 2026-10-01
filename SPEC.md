@@ -565,6 +565,21 @@ Applies a user correction to a stored recipe. Corrections to a facet override th
 **Returns:** updated record and a list of what changed  
 **Behavior:** every call appends a regression case to the private evaluation set
 
+### Input limits
+
+The write tools reject oversized values rather than truncating them, so a recipe is never stored silently incomplete. The Telegram brain fills these arguments from household messages and web pages, so the limits bound what a crafted message can make it store. Errors name the field and the limit, never the value. The limits live in `domain/limits.py`:
+
+| Value | Limit |
+|---|---|
+| `save_recipe` `input` (URL or description) | 20,000 characters |
+| Title | 300 characters |
+| Ingredients | 100 lines of up to 1,000 characters |
+| Notes | 20 notes of up to 2,000 characters (`rate_recipe` notes: one note) |
+| Servings | 100 characters |
+| Classifications and facet corrections | 20 facets, 20 values each, 100 characters per value |
+
+`correct_recipe` checks every field before writing any of them, so a rejected correction changes nothing. Recipes read from NYT JSON-LD are not subject to these limits.
+
 ### Internal application operations
 
 The application also contains internal operations used by ingestion and administration:
