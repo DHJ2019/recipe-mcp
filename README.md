@@ -44,7 +44,8 @@ Level 1 below still needs no keys or accounts at all.
 - Per-person ratings, "something we both like", corrections that permanently override
   classifications, and a one-time, repeatable import of an exported WhatsApp chat.
 - A Telegram group bot that runs unattended on an always-on Mac, with Claude Code as its
-  brain.
+  brain. A shared link is confirmed at once, then classified (cuisine, dish type, mood)
+  and the confirmation updated in place a few seconds later.
 - Not built yet: see [Future ideas](#future-ideas).
 
 ## Future ideas
@@ -56,8 +57,7 @@ Where it could go next. Each is written up, with trade-offs and open questions, 
   already saved from blogs, newspapers and videos.
 - **Learning from the household:** remember stated preferences ("no cilantro for me") as
   hard rules, and learn from past corrections when classifying new recipes.
-- **Smarter Telegram saves:** classify shared links automatically, and "what can we make
-  from this fridge photo?"
+- **Smarter Telegram saves:** "what can we make from this fridge photo?"
 - **More ways in and more places to run:** chat with your recipes from the Claude app,
   and host the bot on Linux or a small cloud server instead of a Mac.
 - **Housekeeping:** a warning before the Claude token expires.
@@ -69,6 +69,8 @@ A short exchange in the household's Telegram group, with the demo household's re
 ```text
 Alex:  https://cooking.nytimes.com/recipes/...   (shared from the NYT Cooking app)
 Bot:   Saved: Miso-Glazed Salmon with Roasted Cabbage
+       Pescatarian · Japanese · 30 minutes
+       (a few seconds later the same message reads)
        Pescatarian · Japanese · roast · light · 30 minutes
 
 Sam:   something cozy under 45 minutes?
@@ -83,8 +85,9 @@ Sam:   👍   (as a reply to the bot's message)
 Bot:   Noted: Sam likes Thai Pumpkin Soup (both positive).
 ```
 
-Links and ratings are answered in a second or two. Questions go to Claude Code and take
-around 15 seconds.
+Links and ratings are answered in a second or two; classifying a link takes Claude Code
+a few more seconds, and the bot then edits its confirmation. Questions go to Claude Code
+and take around 15 seconds.
 
 ## Privacy: where your data lives
 
@@ -215,10 +218,11 @@ git-ignored.
    access. The import is idempotent, so re-run it after a fresh export whenever you
    like. Links to other sites are kept as title-plus-URL stubs and listed separately in
    the report. Imported recipes get rule-derived facets (dietary, effort) only; to
-   classify cuisine, dish type and mood in bulk, ask Claude Code in this repo to "go
-   through the recipes that need classification and propose facets" and it will use
-   `correct_recipe` with `proposed_by_agent`, or run it with a server-side model
-   (Level 3) and `make categorize`.
+   classify cuisine, dish type and mood in bulk, run `make classify-backlog` once the
+   brain is set up (Level 3; one headless Claude Code run per recipe, see step 7), ask
+   Claude Code in this repo to "go through the recipes that need classification and
+   propose facets" and it will use `correct_recipe` with `proposed_by_agent`, or run it
+   with a server-side model (Level 3) and `make categorize`.
 
    ```bash
    uv run recipe-mcp import-whatsapp --dry-run
@@ -249,6 +253,17 @@ git-ignored.
    ```
    make refresh-dietary ARGS=--dry-run   # list the recipes that would change
    make refresh-dietary
+   ```
+
+7. Classify recipes that still have no cuisine, dish type or mood with the brain. Each
+   recipe is one headless Claude Code run on your subscription, so start with a dry run
+   and a small limit. It pauses between runs, stops after three failures in a row, and
+   is safe to stop and re-run (finished recipes drop out):
+
+   ```
+   make classify-backlog ARGS=--dry-run       # how many, and which
+   make classify-backlog ARGS="--limit 5"
+   make classify-backlog
    ```
 
 ## Level 3: optional live integrations

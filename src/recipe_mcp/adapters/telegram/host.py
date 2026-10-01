@@ -3,7 +3,8 @@
 Deterministic intents (NYT links, reply-to ratings, ordinal references, time
 corrections, photos) are handled here without any model. Everything else goes to
 the brain (a headless Claude Code run) which talks to the same store through MCP.
-The bot only ever replies to a message; it never initiates.
+After a link is saved, one more brain turn classifies it and the confirmation is
+edited in place. The bot only ever replies to a message; it never initiates.
 """
 
 from __future__ import annotations
@@ -11,6 +12,7 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from html import escape
 from typing import Any
@@ -23,7 +25,11 @@ from recipe_mcp.domain.models import Member, Sentiment
 from recipe_mcp.providers.agent_brain import Brain, BrainRequest
 from recipe_mcp.services.container import AppContext
 from recipe_mcp.services.corrections import CorrectionError
-from recipe_mcp.services.ingestion import IngestionError
+from recipe_mcp.services.ingestion import IngestionError, SaveResult
+from recipe_mcp.services.link_classification import (
+    LinkClassificationService,
+    needs_classification,
+)
 
 log = logging.getLogger("recipe_mcp.telegram")
 
@@ -52,7 +58,10 @@ class TelegramHost:
         self.ctx = ctx
         self.api = api
         self.brain = brain
+        self.classifier = LinkClassificationService(ctx.recipes, brain, ctx.household_id)
         self._sleep = sleep
+        # Set by a link save in ``_respond``; classified once the reply has been sent.
+        self._saved: SaveResult | None = None
         saved = ctx.state.get(OFFSET_KEY)
         self.offset: int | None = int(saved) if saved else None
 
@@ -117,6 +126,7 @@ class TelegramHost:
             return None
         member = self.ctx.members.by_telegram_id(incoming.user_id)
         reply = self._respond(incoming, member)
+        saved, self._saved = self._saved, None
         if reply is None:
             return None
         text, recipe_ids = reply
@@ -124,6 +134,9 @@ class TelegramHost:
         if recipe_ids:
             self._remember_results(incoming.chat_id, recipe_ids, sent.get("message_id"))
         self._remember_turn(incoming.chat_id, incoming.text, text)
+        message_id = sent.get("message_id")
+        if saved is not None and message_id is not None:
+            self._classify_and_edit(incoming.chat_id, int(message_id), saved, text)
         return text
 
     def _incoming(self, update: dict[str, Any]) -> IncomingMessage | None:
@@ -168,6 +181,7 @@ class TelegramHost:
             except IngestionError as exc:
                 return f"Couldn't save that link: {escape(str(exc))}", []
             ids = [result.recipe.id] if result.recipe.id else []
+            self._saved = result
             return format_confirmation(result.confirmation()), ids
 
         if parsed.intent == Intent.RATE and parsed.recipe_id:
@@ -237,6 +251,30 @@ class TelegramHost:
             log.warning("brain failed: %s", reply.error)
             return "Sorry, I couldn't work that out just now. Try again in a moment.", []
         return escape(reply.text)[:TELEGRAM_MAX_CHARS], reply.recipe_ids
+
+    def _classify_and_edit(
+        self, chat_id: int, message_id: int, saved: SaveResult, sent_text: str
+    ) -> None:
+        """Classify a saved link with one brain turn, then edit the confirmation in place.
+
+        The new text is rebuilt from the database; the brain's reply never reaches the
+        group or the log. On failure the confirmation simply stays as it was.
+        """
+        recipe_id = saved.recipe.id
+        if recipe_id is None or not needs_classification(saved.recipe):
+            return
+        attempt = self.classifier.classify(recipe_id)
+        if not attempt.classified or attempt.recipe is None:
+            log.warning("link classification failed for recipe %s: %s", recipe_id, attempt.error)
+            return
+        log.info("classified recipe %s in %d ms", recipe_id, attempt.duration_ms)
+        text = format_confirmation(replace(saved, recipe=attempt.recipe).confirmation())
+        if text == sent_text:
+            return  # Telegram rejects an edit that changes nothing
+        try:
+            self.api.edit_message_text(chat_id, message_id, text)
+        except TelegramApiError as exc:
+            log.warning("edit failed: %s", exc)
 
     # -- state and sending ------------------------------------------------
 

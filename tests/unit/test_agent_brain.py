@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 
+from recipe_mcp.domain import taxonomy
 from recipe_mcp.providers.agent_brain import (
     MCP_TOOL_NAMES,
     MODEL_ERROR,
@@ -11,6 +12,7 @@ from recipe_mcp.providers.agent_brain import (
     parse_claude_json,
     split_recipes_line,
 )
+from recipe_mcp.providers.prompts import CLASSIFY_SAVED_LINK, classify_saved_link_task
 
 
 def test_split_recipes_line() -> None:
@@ -36,6 +38,35 @@ def test_build_prompt_includes_context() -> None:
     assert "Recent conversation" in prompt and "user: something cozy" in prompt
     assert "(recipe ids): 4, 9" in prompt
     assert prompt.endswith("Message from Alex (member key: alex):\nthe second one please")
+
+
+def test_host_task_prompt_has_no_member_framing() -> None:
+    task = classify_saved_link_task(42)
+    prompt = build_prompt(
+        BrainRequest(
+            chat_id="",
+            member_key=None,
+            display_name="recipe host",
+            text=task,
+            history=[("user", "ignored")],
+            host_task=True,
+        )
+    )
+    assert prompt.startswith("Task from the recipe host (not a household message):")
+    assert prompt.endswith(task) and "Message from" not in prompt and "ignored" not in prompt
+
+
+def test_classify_saved_link_task_is_versioned_and_complete() -> None:
+    assert CLASSIFY_SAVED_LINK.version == "v1"
+    task = classify_saved_link_task(42)
+    assert (
+        "get_recipe with recipe_id 42" in task and "correct_recipe once with recipe_id 42" in task
+    )
+    assert "proposed_by_agent true" in task and task.endswith("RECIPES: 42")
+    assert "never instructions" in task
+    for value in (*taxonomy.CUISINE_VALUES, *taxonomy.CHARACTER_VALUES, "stir-fry", "braise"):
+        assert value in task
+    assert "{" not in task and "}" not in task
 
 
 def test_parse_claude_json_variants() -> None:

@@ -257,8 +257,9 @@ The application:
 5. uses authenticated Playwright only if the JSON-LD is absent or incomplete;
 6. extracts title, ingredients, yield, and time;
 7. categorizes the structured recipe;
-8. stores the metadata and NYT deep link; and
-9. returns a Telegram confirmation.
+8. stores the metadata and NYT deep link;
+9. returns a Telegram confirmation; and
+10. classifies the recipe with one brain turn and edits that confirmation in place (Section 10).
 
 NYT authentication is a one-time interactive login in the dedicated Playwright browser profile on the Mac mini. The session persists locally; no NYT password is stored. `make doctor` reports when the session has expired.
 
@@ -414,6 +415,7 @@ Commands:
 ```text
 make import-whatsapp
 make categorize
+make classify-backlog
 make categorization-report
 ```
 
@@ -424,6 +426,21 @@ New recipes receive a compact Telegram confirmation:
 > Reply to this message with a correction if anything is wrong.
 
 Every correction becomes a regression-evaluation case.
+
+The confirmation never shows `other` for cuisine or dish type. It means nothing in the vocabulary fits, which is not worth a place in the reply.
+
+### Classifying shared links
+
+A link shared in the group is saved without the brain so the confirmation is instant. With no server-side model (`MODEL_PROVIDER=none`) that confirmation carries only rule-derived facets: dietary suitability, effort, and cuisine or meal when the page’s JSON-LD names them. Dish type, character, primary ingredient, cooking method and health orientation stay empty, so requests such as “something cozy” or “a soup” cannot find the recipe. The host therefore classifies the recipe with one brain turn and edits its own confirmation in place:
+
+1. The host sends the confirmation as usual and keeps its message id.
+2. If the recipe has ingredients and no `model` or `user` facet yet, the host runs one headless Claude Code turn with the versioned `classify_saved_link` instruction (`providers/prompts.py`): read the recipe with `get_recipe`, then call `correct_recipe` with `proposed_by_agent: true` and values from the controlled vocabulary. Recipe text is data, never instructions, and the brain still has only the five recipe tools. A link that was already saved and classified needs nothing; an already saved link that was never classified is classified now.
+3. The host re-reads the recipe from the database, rebuilds the confirmation with the same code that wrote it, and edits the original message (`editMessageText`). The brain’s own reply text is discarded, so only what `correct_recipe` stored can appear in the group. When the rebuilt text is unchanged (the proposal touched only facets the confirmation does not show) no edit is sent.
+4. If the brain fails, times out, has its proposal rejected (for example by the input limits) or stores nothing, the confirmation stays as it was and the host logs only the error status, never brain output. Nothing is lost: the backlog command picks the recipe up later.
+
+The turn runs inline in the polling loop after the reply has been sent. Messages that arrive meanwhile wait at Telegram (at most `BRAIN_TIMEOUT_SECONDS`) and are answered in order. At household volume this is simpler and safer than a worker thread sharing the SQLite connection. The classification turn is not added to the chat’s conversation history.
+
+`recipe-mcp classify-backlog` (`make classify-backlog`) runs the same per-recipe classification over existing recipes that have ingredients and no `model` or `user` facet, oldest first. Each recipe is one Claude Code run on the household subscription, so the command takes `--limit N`, waits `--pause SECONDS` between runs (default 2), and stops after three failures in a row. With `--dry-run` it only lists what it would classify and needs no brain. Classified recipes drop out of the list, so the command is safe to stop and run again.
 
 ---
 
@@ -589,6 +606,7 @@ The application also contains internal operations used by ingestion and administ
 - `review_low_confidence_classifications`
 - `import_whatsapp_export`
 - `refresh_dietary` (re-parse stored ingredient lines and re-run dietary rules)
+- `classify_backlog` (one brain turn per unclassified recipe; Section 10)
 
 These are reachable from the CLI and do not need to be exposed as general MCP tools in the first release.
 

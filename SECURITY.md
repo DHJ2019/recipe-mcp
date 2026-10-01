@@ -45,6 +45,11 @@ asking the model to behave.
   `claude setup-token`) or the keychain login.
 - **Bounded work.** Each reply is limited by `BRAIN_MAX_TURNS` and `BRAIN_TIMEOUT_SECONDS`.
   The subprocess gets an argument list, never a shell string.
+- **Classifying a saved link** is a host-written instruction naming the recipe id. The
+  agent reads the recipe with `get_recipe` and stores facets with `correct_recipe`; its
+  reply text is discarded, and the edited confirmation is rebuilt from the database, so
+  recipe text cannot put words of the agent's choosing into the group. Off-vocabulary
+  values are stored as `other` and never shown.
 - **What remains possible:** a crafted message or recipe text could make the agent call
   the recipe tools wrongly (save, rate or correct something) or reply with misleading
   text. There is no delete tool, only allowlisted members can message the bot, and
@@ -61,7 +66,8 @@ asking the model to behave.
 - Only numeric user ids in `TELEGRAM_ALLOWED_USER_IDS`, and only in the group
   `TELEGRAM_GROUP_CHAT_ID` or a private chat with an allowlisted member, are served.
   Everything else is dropped and logged as rejected without content.
-- The bot never sends a message that is not a reply to a message in the group.
+- The bot never sends a message that is not a reply to a message in the group. The only
+  edit it makes is to its own confirmation of a saved link, once the link is classified.
 - Message contents and media are not logged by default. That includes failures: when the
   brain fails, the log records only its exit status or a generic error, never the
   agent's output, which can quote the conversation. `recipe-mcp smoke --brain` prints
