@@ -26,6 +26,7 @@ ALEX_ID, SAM_ID, STRANGER = 1001, 1002, 4004
 class FakeTelegramApi:
     def __init__(self) -> None:
         self.sent: list[dict[str, Any]] = []
+        self.edited: list[dict[str, Any]] = []
         self.updates: list[dict[str, Any]] = []
         self._next_id = 500
 
@@ -49,6 +50,9 @@ class FakeTelegramApi:
             }
         )
         return {"message_id": self._next_id}
+
+    def edit_message_text(self, chat_id: int | str, message_id: int, text: str) -> None:
+        self.edited.append({"chat_id": chat_id, "message_id": message_id, "text": text})
 
 
 def msg(

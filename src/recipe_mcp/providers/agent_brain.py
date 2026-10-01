@@ -59,6 +59,9 @@ class BrainRequest:
     text: str
     history: list[tuple[str, str]] = field(default_factory=list)
     recent_result_ids: list[int] = field(default_factory=list)
+    # True when ``text`` is an instruction from the host itself (classifying a saved
+    # link), not a household message: no member framing, no history.
+    host_task: bool = False
 
 
 @dataclass
@@ -82,6 +85,8 @@ class Brain(Protocol):
 
 
 def build_prompt(request: BrainRequest) -> str:
+    if request.host_task:
+        return "Task from the recipe host (not a household message):\n" + request.text
     lines: list[str] = []
     if request.history:
         lines.append("Recent conversation (oldest first):")

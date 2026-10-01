@@ -1,4 +1,4 @@
-"""Minimal Telegram Bot API client over HTTPS (long polling and replies only)."""
+"""Minimal Telegram Bot API client over HTTPS (long polling, replies and editing them)."""
 
 from __future__ import annotations
 
@@ -21,6 +21,8 @@ class TelegramApi(Protocol):
     def send_message(
         self, chat_id: int | str, text: str, reply_to_message_id: int | None = None
     ) -> dict[str, Any]: ...
+
+    def edit_message_text(self, chat_id: int | str, message_id: int, text: str) -> None: ...
 
 
 class HttpTelegramApi:
@@ -71,3 +73,14 @@ class HttpTelegramApi:
             }
         result: dict[str, Any] = self._call("sendMessage", **params)
         return result
+
+    def edit_message_text(self, chat_id: int | str, message_id: int, text: str) -> None:
+        """Replace the text of a message the bot sent (same HTML rules as sendMessage)."""
+        self._call(
+            "editMessageText",
+            chat_id=chat_id,
+            message_id=message_id,
+            text=text[:4096],
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )

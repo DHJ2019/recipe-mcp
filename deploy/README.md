@@ -100,6 +100,10 @@ anonymous fetch comes back without recipe data.
 - `make doctor` after any change or reboot.
 - `make smoke` for live checks (model, NYT, and a test message to the Telegram group).
 - Backups: see "Backups" below.
+- Classifying older recipes: new links are classified as they are shared; for recipes
+  saved before that, run `make classify-backlog ARGS=--dry-run`, then
+  `make classify-backlog ARGS="--limit 5"`, then without a limit. It can run while the
+  bot is up.
 - Planned restarts with FileVault on: `sudo fdesetup authrestart` (see the main README).
 - Upgrades: `git pull`, `uv sync`, `make test`, then kickstart the daemon.
 

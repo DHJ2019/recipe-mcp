@@ -57,16 +57,6 @@ marked `needs_review`.
 section 23 changes first. Is level 2 worth the extra attack surface once level 1 is in
 daily use?
 
-### Classify links shared in Telegram `follow-up`
-
-**Why:** NYT links saved from the group skip the brain so the reply is instant, and with no
-server-side model nothing fills in cuisine, dish type or mood. A link gets only dietary and
-time tags ("Spicy Garlic Shrimp Stir-Fry · Pescatarian · 20 minutes").
-**What it takes:** after the instant "Saved" reply, run one headless Claude Code turn that
-calls `get_recipe` and `correct_recipe(proposed_by_agent=true)`, then post a short follow-up
-reply ("Chinese · stir-fry · spicy"). Tests with the fake brain.
-**Open question:** follow-up message, or edit the original confirmation in place?
-
 ### Warn before the Claude Code token expires `follow-up` `ops`
 
 **Why:** `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` lasts one year. When it lapses
@@ -220,6 +210,7 @@ Mirrors SPEC.md section 23; kept there as the decision record.
 
 ## Done
 
+- Shared Telegram links classified by the brain, confirmation edited in place; `classify-backlog` for older recipes.
 - Nightly database backup with 14-day retention; `doctor` warns when it is stale.
 - Telegram update offset kept across restarts; `doctor` warns about readable secrets.
 - Input size limits on the write tools.

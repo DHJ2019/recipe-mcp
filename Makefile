@@ -2,7 +2,7 @@
 UV ?= uv
 RUN := $(UV) run
 
-.PHONY: help setup doctor demo test lint typecheck eval smoke import-whatsapp categorize refresh-dietary categorization-report serve serve-telegram install-daemon backup nyt-login clean
+.PHONY: help setup doctor demo test lint typecheck eval smoke import-whatsapp categorize classify-backlog refresh-dietary categorization-report serve serve-telegram install-daemon backup nyt-login clean
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'
@@ -47,6 +47,9 @@ import-whatsapp: ## Import recipe links from the private WhatsApp export
 
 categorize: ## Re-apply staples.yaml and categorize recipes that have no classifications yet
 	$(RUN) recipe-mcp categorize
+
+classify-backlog: ## Classify uncategorized recipes with the brain, one run each (ARGS="--dry-run" or "--limit 5")
+	$(RUN) recipe-mcp classify-backlog $(ARGS)
 
 refresh-dietary: ## Re-parse stored ingredients and re-run dietary rules (ARGS=--dry-run to preview)
 	$(RUN) recipe-mcp refresh-dietary $(ARGS)

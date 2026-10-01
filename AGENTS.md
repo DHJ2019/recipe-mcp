@@ -21,7 +21,7 @@ correction without that flag overrides it.
 ```
 adapters/  (mcp, telegram, shortcut, nyt, whatsapp)  thin; no business logic
 services/  (ingestion, categorization, recommendation, feedback, corrections,
-            members, whatsapp_import, fixtures, evals, container)
+            members, whatsapp_import, link_classification, fixtures, evals, container)
 domain/    (models, taxonomy, ingredients, staples, dietary, ranking, feedback,
             references, urls, household)
 providers/ (agent_brain: headless Claude Code runner; optional ModelClient impls for
@@ -65,6 +65,7 @@ make typecheck    # mypy --strict on src/
 make eval         # synthetic evals always; private evals when .private/evals exists
 make smoke        # opt-in live checks; each reports the missing variable names
 make import-whatsapp / categorize / refresh-dietary / categorization-report
+make classify-backlog  # brain classifies unclassified recipes (ARGS="--dry-run" or "--limit 5")
 make serve        # MCP server over stdio (uv run --env-file .env recipe-mcp serve)
 make serve-telegram / install-daemon   # long-polling host; launchd plists (bot + nightly backup)
 make backup       # copy the database to .private/backups/, keeping the newest 14

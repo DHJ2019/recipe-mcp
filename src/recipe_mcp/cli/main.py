@@ -12,8 +12,14 @@ from collections.abc import Callable
 from pathlib import Path
 
 from recipe_mcp import __version__
-from recipe_mcp.domain import dietary, staples
-from recipe_mcp.domain.models import Member, RecommendationRequest, RecommendationResult, Sentiment
+from recipe_mcp.domain import dietary, staples, taxonomy
+from recipe_mcp.domain.models import (
+    Member,
+    Recipe,
+    RecommendationRequest,
+    RecommendationResult,
+    Sentiment,
+)
 from recipe_mcp.domain.taxonomy import Facet
 from recipe_mcp.providers.agent_brain import Brain
 from recipe_mcp.services import fixtures
@@ -622,6 +628,52 @@ def cmd_categorize(args: argparse.Namespace, settings: Settings) -> int:
         ctx.close()
 
 
+def cmd_classify_backlog(args: argparse.Namespace, settings: Settings) -> int:
+    from recipe_mcp.services.link_classification import (
+        MAX_CONSECUTIVE_FAILURES,
+        ClassificationAttempt,
+        LinkClassificationService,
+    )
+
+    ctx = _ctx(settings)
+    try:
+        if args.dry_run:
+            pending = ctx.recipes.list_uncategorized(ctx.household_id)
+            todo = pending[: args.limit] if args.limit else pending
+            for r in todo:
+                print(f"{r.id}: {r.title}")
+            print(f"{len(pending)} recipe(s) need classification; would classify {len(todo)}")
+            return 0
+        missing = settings.missing_for("brain")
+        if missing:
+            print(f"classify-backlog needs the brain; missing: {', '.join(missing)}")
+            return 2
+        service = LinkClassificationService(ctx.recipes, _build_brain(settings), ctx.household_id)
+
+        def report(index: int, total: int, recipe: Recipe, attempt: ClassificationAttempt) -> None:
+            head = f"[{index}/{total}] {recipe.id}: {recipe.title}"
+            if not attempt.classified or attempt.recipe is None:
+                print(f"{head}: failed ({attempt.error})", flush=True)
+                return
+            shown = (Facet.CUISINE, Facet.DISH_TYPE, Facet.CHARACTER, Facet.COOKING_METHOD)
+            tags = [v for f in shown for v in attempt.recipe.facet_values(f) if v != taxonomy.OTHER]
+            review = (
+                " (review)" if any(c.needs_review for c in attempt.recipe.classifications) else ""
+            )
+            print(f"{head}: {' · '.join(tags) or 'classified'}{review}", flush=True)
+
+        result = service.classify_backlog(limit=args.limit, pause_seconds=args.pause, report=report)
+        print(
+            f"classified {result.classified}, failed {result.failed}; "
+            f"{result.pending - result.classified} recipe(s) still need classification"
+        )
+        if result.stopped_early:
+            print(f"stopped after {MAX_CONSECUTIVE_FAILURES} failures in a row")
+        return 1 if result.failed else 0
+    finally:
+        ctx.close()
+
+
 def cmd_refresh_dietary(args: argparse.Namespace, settings: Settings) -> int:
     ctx = _ctx(settings)
     try:
@@ -761,6 +813,13 @@ def cmd_list(args: argparse.Namespace, settings: Settings) -> int:
 # -- parser -----------------------------------------------------------------
 
 
+def _positive_int(value: str) -> int:
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError("must be 1 or more")
+    return number
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="recipe-mcp", description="Household recipe assistant")
     parser.add_argument("--version", action="version", version=f"recipe-mcp {__version__}")
@@ -796,6 +855,16 @@ def build_parser() -> argparse.ArgumentParser:
     imp.add_argument("--dry-run", action="store_true", help="list links without importing")
 
     add("categorize", "re-apply staples and categorize uncategorized recipes", cmd_categorize)
+    backlog = add(
+        "classify-backlog",
+        "classify uncategorized recipes with one brain turn each",
+        cmd_classify_backlog,
+    )
+    backlog.add_argument("--limit", type=_positive_int, help="classify at most this many")
+    backlog.add_argument(
+        "--pause", type=float, default=2.0, help="seconds between brain runs (default: 2)"
+    )
+    backlog.add_argument("--dry-run", action="store_true", help="list recipes without classifying")
     rdiet = add(
         "refresh-dietary",
         "re-parse stored ingredients and re-run the dietary rules",

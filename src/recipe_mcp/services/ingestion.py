@@ -53,11 +53,15 @@ class SaveResult:
         def facet(f: Facet, text: str) -> str:
             return f"{text}?" if text and r.facet_needs_review(f) else text
 
+        def shown(f: Facet) -> str:
+            # "other" means nothing in the vocabulary fits; not worth a place in the reply.
+            return ", ".join(v for v in r.facet_values(f) if v != taxonomy.OTHER)
+
         bits = [
             (dietary.strictest(r.facet_values(Facet.DIETARY)) or "").capitalize(),
-            facet(Facet.CUISINE, ", ".join(r.facet_values(Facet.CUISINE)).capitalize()),
-            facet(Facet.DISH_TYPE, ", ".join(r.facet_values(Facet.DISH_TYPE))),
-            facet(Facet.CHARACTER, ", ".join(r.facet_values(Facet.CHARACTER))),
+            facet(Facet.CUISINE, shown(Facet.CUISINE).capitalize()),
+            facet(Facet.DISH_TYPE, shown(Facet.DISH_TYPE)),
+            facet(Facet.CHARACTER, shown(Facet.CHARACTER)),
             f"{r.total_minutes} minutes" if r.total_minutes else "time unknown",
         ]
         status = " (draft)" if r.status == RecipeStatus.DRAFT else ""
