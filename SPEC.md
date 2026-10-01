@@ -1084,6 +1084,7 @@ The Mac mini is the only runtime host. Everything below is documented in `deploy
 - `com.recipe-mcp.telegram` LaunchDaemon runs `uv run --env-file .env recipe-mcp serve-telegram` from the repository directory with `KeepAlive` and `RunAtLoad`. Logs go to `/Library/Logs/recipe-mcp/`.
 - The MCP server is not a daemon. The Telegram host spawns it over stdio, and Codex or Claude Code spawn their own instance on demand.
 - Long polling means the daemon only makes outbound HTTPS requests to Telegram. No inbound port, no tunnel, no webhook secret.
+- The host stores the next `getUpdates` offset in the `app_state` table (migration `0003`) before handling each update. After a restart it resumes from there, so no message is answered twice, and a message that crashes the host is skipped rather than replayed on every restart.
 
 ### NYT session
 
@@ -1092,7 +1093,7 @@ The Mac mini is the only runtime host. Everything below is documented in `deploy
 
 ### Operations
 
-- `make doctor` is the first thing to run after any change or reboot.
+- `make doctor` is the first thing to run after any change or reboot. It also warns when `.env`, `.private/`, the database or its folder can be read by other accounts, naming the path, its mode and the `chmod` that fixes it; it never reads the files.
 - `make smoke` sends one test message to the group and expects a reply within 30 seconds.
 - Database backups: a nightly `launchd` job copies `data/recipes.db` to `.private/backups/` using SQLite’s online backup API, keeping 14 days.
 - Upgrades: `git pull`, `uv sync`, `make test`, `sudo launchctl kickstart -k system/com.recipe-mcp.telegram`.
@@ -1172,6 +1173,7 @@ Open ideas and agreed follow-ups that are not yet specified live in `IDEAS.md`, 
 - Whether voice-note transcription belongs in the application
 - Which individual tasks merit local-model replacement after baseline evaluation
 - Whether a private web reading interface is necessary beyond Telegram summaries and source links
+- Whether the Telegram host needs rate limits or a daily budget on brain runs (today it handles one message at a time and only allowlisted members reach it)
 
 ---
 

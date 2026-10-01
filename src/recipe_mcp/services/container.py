@@ -15,6 +15,7 @@ from recipe_mcp.adapters.nyt.fetcher import (
 from recipe_mcp.db import Database, apply_migrations, connect
 from recipe_mcp.db.migrations import DEFAULT_MIGRATIONS_DIR
 from recipe_mcp.db.repositories import (
+    AppStateRepository,
     FeedbackRepository,
     HouseholdRepository,
     MemberRepository,
@@ -58,6 +59,7 @@ class AppContext:
     feedback: FeedbackRepository
     model_runs: ModelRunRepository
     pending: PendingInteractionRepository
+    state: AppStateRepository
     categorization: CategorizationService
     ingestion: IngestionService
     recommendation: RecommendationService
@@ -110,6 +112,7 @@ def build_context(
     feedback = FeedbackRepository(db)
     model_runs = ModelRunRepository(db)
     pending = PendingInteractionRepository(db)
+    state = AppStateRepository(db)
     household = households.get_or_create_default()
     assert household.id is not None
     sync_members(members, settings.members_path, household.id)
@@ -144,6 +147,7 @@ def build_context(
         feedback=feedback,
         model_runs=model_runs,
         pending=pending,
+        state=state,
         categorization=categorization,
         ingestion=ingestion,
         recommendation=recommendation,

@@ -55,6 +55,9 @@ asking the model to behave.
 ## Telegram
 
 - The bot uses long polling: outbound HTTPS only, no inbound port, no webhook, no tunnel.
+- The update offset is saved before each message is handled, so a restart never replays
+  a message (no repeated replies or repeated agent runs), and a message that crashes the
+  host is skipped instead of crashing it again on every restart.
 - Only numeric user ids in `TELEGRAM_ALLOWED_USER_IDS`, and only in the group
   `TELEGRAM_GROUP_CHAT_ID` or a private chat with an allowlisted member, are served.
   Everything else is dropped and logged as rejected without content.
@@ -101,7 +104,9 @@ asking the model to behave.
 ## Database and private evals
 
 - `make setup` sets `data/` and `.private/` to mode 700 and `.env` to mode 600, so other
-  accounts on the Mac can't read recipes, member ids, exports or secrets.
+  accounts on the Mac can't read recipes, member ids, exports or secrets. Modes can drift
+  after a restore or a copy, so `recipe-mcp doctor` warns about any of these that another
+  account could read, with the `chmod` that fixes it. It checks modes only.
 
 - SQLite in WAL mode under `data/`, git-ignored. All queries are parameterised.
 - Migrations are forward-only and applied automatically at startup.

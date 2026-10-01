@@ -250,6 +250,36 @@ def test_poll_once_advances_offset(host: tuple[TelegramHost, FakeTelegramApi, Fa
     assert len(api.sent) == 2
 
 
+def test_offset_survives_a_restart(
+    host: tuple[TelegramHost, FakeTelegramApi, FakeBrain], seeded_ctx: AppContext
+) -> None:
+    h, api, _brain = host
+    api.updates = [msg(ALEX_ID, "hello there", 60), msg(ALEX_ID, "and again", 61)]
+    assert h.poll_once() == 2
+    restarted = TelegramHost(seeded_ctx, api, FakeBrain())
+    assert restarted.offset == 62
+    assert restarted.poll_once() == 0  # nothing replayed, no second reply
+    assert len(api.sent) == 2
+
+
+def test_a_message_that_crashes_the_host_is_not_replayed(seeded_ctx: AppContext) -> None:
+    seeded_ctx.settings.telegram_allowed_user_ids = f"{ALEX_ID}"
+    seeded_ctx.settings.telegram_group_chat_id = GROUP
+    api = FakeTelegramApi()
+    api.updates = [msg(ALEX_ID, "this one breaks", 70)]
+
+    class CrashingBrain:
+        name = "crashing"
+
+        def reply(self, request: BrainRequest):  # type: ignore[no-untyped-def]
+            raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError):
+        TelegramHost(seeded_ctx, api, CrashingBrain()).poll_once()
+    after_restart = TelegramHost(seeded_ctx, api, FakeBrain())
+    assert after_restart.poll_once() == 0
+
+
 def test_member_without_telegram_id(seeded_ctx: AppContext) -> None:
     seeded_ctx.settings.telegram_allowed_user_ids = "9"
     seeded_ctx.settings.telegram_group_chat_id = GROUP
