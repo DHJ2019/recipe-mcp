@@ -237,6 +237,7 @@ def write_brain_mcp_config(workdir: Path, repo_root: Path, uv_path: str) -> Path
     }
     path = workdir / "mcp.json"
     path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+    path.chmod(0o600)
     return path
 
 
@@ -444,6 +445,9 @@ def cmd_smoke(args: argparse.Namespace, settings: Settings) -> int:
         if reply.error:
             failures += 1
             print(f"  FAIL brain: {reply.error}")
+            # Your own terminal, not the daemon log, so the details are safe to show here.
+            if reply.diagnostic:
+                print(f"       {reply.diagnostic}")
         else:
             print(
                 f"  ok   brain replied in {reply.duration_ms} ms, recipes {reply.recipe_ids}: "

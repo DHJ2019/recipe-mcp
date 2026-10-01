@@ -26,6 +26,8 @@ MCP_TOOL_NAMES: tuple[str, ...] = (
     "mcp__recipe-mcp__rate_recipe",
     "mcp__recipe-mcp__correct_recipe",
 )
+# Logged in place of the model's own error text, which can quote the conversation.
+MODEL_ERROR = "model reported an error"
 
 SYSTEM_PROMPT = """You are the household recipe assistant replying inside a private Telegram group.
 Rules:
@@ -67,6 +69,10 @@ class BrainReply:
     duration_ms: int = 0
     cost_usd: float | None = None
     raw: str | None = None
+    # The tail of the subprocess's own output when it fails. It can quote household
+    # messages or recipe text, so only `recipe-mcp smoke` prints it; the daemon logs
+    # `error`, never this.
+    diagnostic: str | None = None
 
 
 class Brain(Protocol):
@@ -193,7 +199,10 @@ class ClaudeCodeBrain:
         if completed.returncode != 0:
             tail = (completed.stderr or completed.stdout or "").strip()[-300:]
             return BrainReply(
-                text="", error=f"exit {completed.returncode}: {tail}", duration_ms=duration
+                text="",
+                error=f"exit {completed.returncode}",
+                duration_ms=duration,
+                diagnostic=tail or None,
             )
         return parse_claude_json(completed.stdout, duration)
 
@@ -213,12 +222,13 @@ def parse_claude_json(stdout: str, duration_ms: int = 0) -> BrainReply:
     return BrainReply(
         text=text,
         recipe_ids=ids,
-        error=result[:300] if is_error else None,
+        error=MODEL_ERROR if is_error else None,
         duration_ms=int(data.get("duration_ms", duration_ms))
         if isinstance(data, dict)
         else duration_ms,
         cost_usd=data.get("total_cost_usd") if isinstance(data, dict) else None,
         raw=stdout,
+        diagnostic=result[:300] if is_error else None,
     )
 
 

@@ -121,6 +121,20 @@ def test_brain_child_env_strips_anthropic_api_credentials() -> None:
     assert "CLAUDE_CODE_OAUTH_TOKEN" not in load_settings(env_file=None).brain_child_env({})
 
 
+def test_brain_child_env_passes_only_allowlisted_names() -> None:
+    env = load_settings(env_file=None).brain_child_env(
+        {
+            "PATH": "/usr/bin",
+            "HOME": "/h",
+            "LANG": "en_GB.UTF-8",
+            "TELEGRAM_BOT_TOKEN": "123:not-real",
+            "OPENAI_API_KEY": "sk-not-real",
+            "RANDOM_SECRET": "x",
+        }
+    )
+    assert env == {"PATH": "/usr/bin", "HOME": "/h", "LANG": "en_GB.UTF-8"}
+
+
 def test_env_file_problems_reports_wrapped_values_by_line_only(tmp_path: Path) -> None:
     from recipe_mcp.settings import env_file_problems
 

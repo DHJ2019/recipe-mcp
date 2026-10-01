@@ -193,6 +193,27 @@ def test_brain_failure_is_graceful(seeded_ctx: AppContext) -> None:
     assert reply is not None and reply.startswith("Sorry")
 
 
+def test_brain_failure_details_never_reach_the_log(
+    seeded_ctx: AppContext, caplog: pytest.LogCaptureFixture
+) -> None:
+    seeded_ctx.settings.telegram_allowed_user_ids = f"{ALEX_ID}"
+    seeded_ctx.settings.telegram_group_chat_id = GROUP
+
+    class LeakyBrain:
+        name = "leaky"
+
+        def reply(self, request: BrainRequest):  # type: ignore[no-untyped-def]
+            from recipe_mcp.providers.agent_brain import BrainReply
+
+            return BrainReply(text="", error="exit 1", diagnostic=f"stderr: {request.text}")
+
+    caplog.set_level(logging.DEBUG)
+    h = TelegramHost(seeded_ctx, FakeTelegramApi(), LeakyBrain())
+    h.handle_update(msg(ALEX_ID, "private lasagne plans", 41))
+    assert "exit 1" in caplog.text
+    assert "lasagne" not in caplog.text
+
+
 def test_startup_retries_get_me_until_telegram_is_reachable(seeded_ctx: AppContext) -> None:
     """Regression: at boot DNS is not ready and getMe raised, crashing the daemon."""
 

@@ -31,7 +31,30 @@ Feature = Literal[
 ]
 
 DEFAULT_OPENAI_MODEL = "gpt-4o"
-BRAIN_STRIPPED_ENV: tuple[str, ...] = ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN")
+# The only variables the headless brain inherits. Everything else in the daemon's
+# environment (the Telegram bot token, model keys, Anthropic API credentials) stays out.
+# Add a name here only when `claude` needs it, and note whether its value can hold a
+# credential (the proxy variables can, as user:password@host).
+BRAIN_ALLOWED_ENV: tuple[str, ...] = (
+    "PATH",
+    "HOME",
+    "USER",
+    "LOGNAME",
+    "SHELL",
+    "LANG",
+    "LC_ALL",
+    "LC_CTYPE",
+    "TMPDIR",
+    "TERM",
+    "CLAUDE_CONFIG_DIR",
+    "HTTPS_PROXY",
+    "HTTP_PROXY",
+    "NO_PROXY",
+    "https_proxy",
+    "http_proxy",
+    "no_proxy",
+    "NODE_EXTRA_CA_CERTS",
+)
 DEFAULT_MEMBERS_FILE = Path(".private/members.yaml")
 
 
@@ -195,13 +218,14 @@ class Settings(BaseSettings):
     def brain_child_env(self, base: Mapping[str, str] | None = None) -> dict[str, str]:
         """Environment for the headless ``claude -p`` brain.
 
-        Anthropic API credentials are removed: when Claude Code runs headless and finds
-        them it bills the API per token instead of using the subscription login or
-        ``CLAUDE_CODE_OAUTH_TOKEN``, which is the whole point of the agent brain.
+        Only the names in ``BRAIN_ALLOWED_ENV`` are passed on, so the bot token and any
+        model keys never reach the agent. That also keeps out Anthropic API credentials:
+        when Claude Code runs headless and finds them it bills the API per token instead
+        of using the subscription login or ``CLAUDE_CODE_OAUTH_TOKEN``, which is the whole
+        point of the agent brain.
         """
-        env = dict(os.environ if base is None else base)
-        for name in BRAIN_STRIPPED_ENV:
-            env.pop(name, None)
+        source = os.environ if base is None else base
+        env = {name: source[name] for name in BRAIN_ALLOWED_ENV if name in source}
         if self.claude_code_oauth_token is not None:
             env["CLAUDE_CODE_OAUTH_TOKEN"] = self.claude_code_oauth_token.get_secret_value()
         return env

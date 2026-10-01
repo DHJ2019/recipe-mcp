@@ -14,6 +14,8 @@ below are the ones that matter for that deployment.
   `.private/members.yaml`, which is never committed.
 - CI runs with `MODEL_PROVIDER=fake` and an in-memory database and never reads a
   developer `.env`. A gitleaks secret scan runs on every push.
+- CI's `GITHUB_TOKEN` is read-only, and checkout does not leave it on the runner's disk
+  for later steps.
 
 ## The brain (headless Claude Code)
 
@@ -28,14 +30,19 @@ asking the model to behave.
   showed the built-in tools were still available, and the model's own refusal was the
   only thing stopping it reading files.)
 - **Isolated working folder.** The agent runs from `.private/brain/` (mode 700), which is
-  empty apart from its own MCP config with absolute paths. The repository, `.env` and
-  project instructions are out of its reach and out of its context.
+  empty apart from its own MCP config (mode 600) with absolute paths. The repository,
+  `.env` and project instructions are out of its reach and out of its context.
 - **No message transcripts.** `--no-session-persistence` stops Claude Code saving each
   household conversation under `~/.claude/projects/`; stdin is `/dev/null` so nothing
   extra is appended to the prompt.
+- **Allowlisted environment.** The agent inherits only the variables in
+  `BRAIN_ALLOWED_ENV` (`settings.py`): path, home, locale, temp folder and proxy
+  settings. The Telegram bot token, model keys and everything else in the daemon's
+  environment stay out. If `claude` needs another variable, add that one name, after
+  checking whether its value can hold a credential.
 - **Subscription, not API billing.** `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` are
-  removed from the agent's environment; it authenticates with `CLAUDE_CODE_OAUTH_TOKEN`
-  (from `claude setup-token`) or the keychain login.
+  not on that list; the agent authenticates with `CLAUDE_CODE_OAUTH_TOKEN` (from
+  `claude setup-token`) or the keychain login.
 - **Bounded work.** Each reply is limited by `BRAIN_MAX_TURNS` and `BRAIN_TIMEOUT_SECONDS`.
   The subprocess gets an argument list, never a shell string.
 - **What remains possible:** a crafted message or recipe text could make the agent call
@@ -52,8 +59,12 @@ asking the model to behave.
   `TELEGRAM_GROUP_CHAT_ID` or a private chat with an allowlisted member, are served.
   Everything else is dropped and logged as rejected without content.
 - The bot never sends a message that is not a reply to a message in the group.
-- Message contents and media are not logged by default. Photos are written to
-  `TEMP_MEDIA_DIR` under `.private/` and deleted after processing.
+- Message contents and media are not logged by default. That includes failures: when the
+  brain fails, the log records only its exit status or a generic error, never the
+  agent's output, which can quote the conversation. `recipe-mcp smoke --brain` prints
+  those details to your own terminal for debugging.
+- Photos are written to `TEMP_MEDIA_DIR` under `.private/` and deleted after
+  processing.
 - The bot token is a secret; keep it in `.env` only.
 
 ## NYT Cooking
