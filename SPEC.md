@@ -318,7 +318,7 @@ The initial taxonomy supports observed product questions without attempting to m
 | Facet | Initial examples | Determination |
 |---|---|---|
 | Dietary suitability | vegan, vegetarian, pescatarian, omnivore | Ingredient flags plus validation rules |
-| Cuisine | Thai, Italian, Indian, Japanese, Korean, Mexican, Mediterranean, American, French, other | Model, controlled values |
+| Cuisine | Thai, Italian, Indian, Japanese, Korean, Chinese, Vietnamese, Mexican, Mediterranean, American, French, other | Model, controlled values |
 | Dish type | soup, salad, curry, stew, pasta, roast, stir-fry, sandwich, rice dish, noodle dish, other | Model, controlled values |
 | Meal/course | breakfast, lunch, dinner, starter, dessert, snack | Model when relevant |
 | Primary ingredient | salmon, tuna, chicken, tofu, legumes | Ingredients plus model; drives the `main_ingredient` filter |
@@ -382,6 +382,10 @@ The model returns a confidence in `[0, 1]` per facet. A classification with conf
 ### Taxonomy growth
 
 The model cannot silently create permanent categories. If no value fits, it returns `other` plus a proposed value. New values are added only after review or repeated evidence from real recipes and queries.
+
+The proposed value is kept next to `other`, whether a model, an agent or a person supplied it. A person’s correction to a value outside the vocabulary is stored the same way rather than dropped. When the vocabulary grows, `recipe-mcp refresh-taxonomy` (`make refresh-taxonomy`) moves every stored `other` whose proposed value is now in the vocabulary onto that value and clears the proposal. No model is involved, user-confirmed values stay user-confirmed, and running it twice changes nothing. It then lists the proposed values still parked under `other`, with a recipe count for each, per facet, which is the evidence for the next addition. `ARGS=--dry-run` reports without writing.
+
+Chinese and Vietnamese were added to the cuisine list on that basis (household use). Changing a vocabulary list changes the wording of every prompt that lists it, so those prompt versions are bumped with it.
 
 ---
 
@@ -607,6 +611,7 @@ The application also contains internal operations used by ingestion and administ
 - `import_whatsapp_export`
 - `refresh_dietary` (re-parse stored ingredient lines and re-run dietary rules)
 - `classify_backlog` (one brain turn per unclassified recipe; Section 10)
+- `refresh_taxonomy` (move stored `other` values onto newly added vocabulary; Section 9)
 
 These are reachable from the CLI and do not need to be exposed as general MCP tools in the first release.
 

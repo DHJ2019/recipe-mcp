@@ -174,16 +174,19 @@ class CorrectionService:
                     "dietary_suitability is derived from ingredients; correct the ingredients"
                 )
             cleaned: list[str] = []
+            proposed: dict[str, str] = {}
             for raw in values if isinstance(values, list) else [values]:
-                value, _ = taxonomy.normalize_value(facet, str(raw))
-                if value:
+                value, unknown = taxonomy.normalize_value(facet, str(raw))
+                if value and value not in cleaned:
                     cleaned.append(value)
+                    if unknown:  # kept next to "other" so refresh-taxonomy can move it later
+                        proposed[value] = unknown
             if not cleaned:
                 raise CorrectionError(f"no valid value for {facet_name}: {values}")
             if facet not in taxonomy.MULTI_VALUE_FACETS:
                 cleaned = cleaned[:1]
             assert recipe.id is not None
-            self.recipes.confirm_facet(recipe.id, facet, cleaned)
+            self.recipes.confirm_facet(recipe.id, facet, cleaned, proposed)
             changes.append(f"{facet.value} -> {', '.join(cleaned)}")
 
         refreshed = self.recipes.get(recipe_id)

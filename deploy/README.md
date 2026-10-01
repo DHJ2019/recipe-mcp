@@ -104,6 +104,9 @@ anonymous fetch comes back without recipe data.
   saved before that, run `make classify-backlog ARGS=--dry-run`, then
   `make classify-backlog ARGS="--limit 5"`, then without a limit. It can run while the
   bot is up.
+- After an upgrade that adds vocabulary (a new cuisine, say): `make refresh-taxonomy`
+  moves recipes stored as "other" onto it; `ARGS=--dry-run` previews and lists what is
+  still "other".
 - Planned restarts with FileVault on: `sudo fdesetup authrestart` (see the main README).
 - Upgrades: `git pull`, `uv sync`, `make test`, then kickstart the daemon.
 

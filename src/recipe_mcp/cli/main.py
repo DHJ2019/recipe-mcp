@@ -700,6 +700,24 @@ def cmd_refresh_dietary(args: argparse.Namespace, settings: Settings) -> int:
         ctx.close()
 
 
+def cmd_refresh_taxonomy(args: argparse.Namespace, settings: Settings) -> int:
+    ctx = _ctx(settings)
+    try:
+        result = ctx.categorization.refresh_taxonomy(ctx.household_id, apply=not args.dry_run)
+        for m in result.moves:
+            print(f"{m.recipe_id}: {m.title} — {m.facet.value}: other -> {m.value}")
+        verb = "would move" if args.dry_run else "moved"
+        print(f"{verb} {len(result.moves)} value(s) from 'other' onto the vocabulary")
+        if result.remaining:
+            print("Still 'other' (proposed values not in the vocabulary):")
+            for facet, counts in result.remaining.items():
+                ranked = sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+                print(f"  {facet.value}: " + ", ".join(f"{v} ({n})" for v, n in ranked))
+        return 0
+    finally:
+        ctx.close()
+
+
 def cmd_categorization_report(args: argparse.Namespace, settings: Settings) -> int:
     ctx = _ctx(settings)
     try:
@@ -871,6 +889,12 @@ def build_parser() -> argparse.ArgumentParser:
         cmd_refresh_dietary,
     )
     rdiet.add_argument("--dry-run", action="store_true", help="report changes without writing")
+    rtax = add(
+        "refresh-taxonomy",
+        "move stored 'other' values onto newly added vocabulary",
+        cmd_refresh_taxonomy,
+    )
+    rtax.add_argument("--dry-run", action="store_true", help="report changes without writing")
     rep = add("categorization-report", "Markdown review report", cmd_categorization_report)
     rep.add_argument("--out", help="write to a file instead of stdout")
 

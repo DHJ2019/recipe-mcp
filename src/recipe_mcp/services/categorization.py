@@ -52,6 +52,23 @@ class DietaryRefresh:
         return self.before != self.after
 
 
+@dataclass
+class TaxonomyMove:
+    """A stored ``other`` whose proposed value is now in the vocabulary."""
+
+    recipe_id: int
+    title: str
+    facet: Facet
+    value: str
+
+
+@dataclass
+class TaxonomyRefresh:
+    moves: list[TaxonomyMove] = field(default_factory=list)
+    # Proposed values still parked under ``other``: facet -> {proposed value: recipes}.
+    remaining: dict[Facet, dict[str, int]] = field(default_factory=dict)
+
+
 def dietary_classifications(recipe: Recipe) -> list[Classification]:
     return [
         Classification(facet=Facet.DIETARY, value=diet, source=FacetSource.RULE, confidence=1.0)
@@ -284,6 +301,30 @@ class CategorizationService:
         refreshed = self.recipes.get(recipe.id)
         assert refreshed is not None
         return refreshed
+
+    def refresh_taxonomy(self, household_id: int, apply: bool = False) -> TaxonomyRefresh:
+        """Move stored ``other`` values onto vocabulary added since they were stored.
+
+        Deterministic: a value moves only when its recorded proposal now normalizes to
+        a vocabulary value. Source and confirmation are kept, so a person's correction
+        stays theirs. With ``apply=False`` nothing is written.
+        """
+        result = TaxonomyRefresh()
+        for recipe in self.recipes.list_for_household(household_id):
+            if recipe.id is None:
+                continue
+            for c in recipe.classifications:
+                if c.value != taxonomy.OTHER or not c.proposed_value:
+                    continue
+                value, _ = taxonomy.normalize_value(c.facet, c.proposed_value)
+                if not value or value == taxonomy.OTHER:
+                    counts = result.remaining.setdefault(c.facet, {})
+                    counts[c.proposed_value] = counts.get(c.proposed_value, 0) + 1
+                    continue
+                result.moves.append(TaxonomyMove(recipe.id, recipe.title, c.facet, value))
+                if apply:
+                    self.recipes.move_other_value(recipe.id, c.facet, value)
+        return result
 
     def refresh_dietary(self, household_id: int, apply: bool = False) -> list[DietaryRefresh]:
         """Re-parse stored ingredient lines and re-run the dietary rules.
