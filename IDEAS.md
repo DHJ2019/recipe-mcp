@@ -74,12 +74,6 @@ the bot only says "Sorry, I couldn't work that out."
 **What it takes:** record the creation date in `.env`, have `make doctor` warn 30 days
 ahead, and make the brain's 401 produce a clear log line.
 
-### Nightly database backup `follow-up` `ops`
-
-**Why:** the whole collection lives in one SQLite file on the Mac mini.
-**What it takes:** a launchd job running SQLite's online backup into `.private/backups/`,
-keeping 14 days (SPEC 19A), plus a `make doctor` check that the newest backup is recent.
-
 ### Free-form household tags `follow-up`
 
 **Why:** the controlled taxonomy can't hold personal labels ("Sam's birthday",
@@ -226,6 +220,7 @@ Mirrors SPEC.md section 23; kept there as the decision record.
 
 ## Done
 
+- Nightly database backup with 14-day retention; `doctor` warns when it is stale.
 - Telegram update offset kept across restarts; `doctor` warns about readable secrets.
 - Input size limits on the write tools.
 - Private vulnerability reporting; SHA-pinned Actions, Dependabot and a weekly audit.

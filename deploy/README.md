@@ -31,11 +31,13 @@ make doctor
 
 ## Daemon
 
-`make install-daemon` (run as your normal user, not with sudo) renders
-`deploy/com.recipe-mcp.telegram.plist` with the repository path, the `uv` binary, your
-user name and home directory filled in, writes it to `.private/`, and prints the `sudo`
-commands to create `/Library/Logs/recipe-mcp/`, copy the plist to `/Library/LaunchDaemons`
-and bootstrap it.
+`make install-daemon` (run as your normal user, not with sudo) renders two plists from
+`deploy/` with the repository path, the `uv` binary, your user name and home directory
+filled in, writes them to `.private/`, and prints the `sudo` commands to create
+`/Library/Logs/recipe-mcp/`, copy them to `/Library/LaunchDaemons` and bootstrap them:
+
+- `com.recipe-mcp.telegram.plist`: the bot, started at boot and kept running.
+- `com.recipe-mcp.backup.plist`: the nightly database backup (see "Backups" below).
 
 It is a LaunchDaemon, so it starts at boot without anyone logging in, but the plist's
 `UserName` makes it run as you. That keeps `data/recipes.db`, the `uv` cache and the
@@ -97,7 +99,44 @@ anonymous fetch comes back without recipe data.
 
 - `make doctor` after any change or reboot.
 - `make smoke` for live checks (model, NYT, and a test message to the Telegram group).
-- Backups: an automatic nightly backup is not built yet (see IDEAS.md). Until then:
-  `sqlite3 data/recipes.db ".backup .private/backups/recipes-$(date +%F).db"`.
+- Backups: see "Backups" below.
 - Planned restarts with FileVault on: `sudo fdesetup authrestart` (see the main README).
 - Upgrades: `git pull`, `uv sync`, `make test`, then kickstart the daemon.
+
+## Backups
+
+`com.recipe-mcp.backup` runs `recipe-mcp backup` every night at 03:17 as your user. It
+copies `data/recipes.db` with SQLite's online backup API, which is safe while the bot is
+running, to `.private/backups/recipes-YYYY-MM-DD.db` (mode 600), checks the copy's
+integrity before keeping it, and keeps the newest 14 (`BACKUP_DIR` and `BACKUP_KEEP` in
+`.env`). `make backup` runs the same thing by hand. `make doctor` warns when there is no
+backup or the newest is more than 36 hours old; the job's output goes to
+`/Library/Logs/recipe-mcp/backup.log`.
+
+If you installed the bot before the backup job existed, add just the backup job:
+
+```bash
+make install-daemon
+sudo cp .private/com.recipe-mcp.backup.plist /Library/LaunchDaemons/
+sudo launchctl bootstrap system /Library/LaunchDaemons/com.recipe-mcp.backup.plist
+```
+
+To test it straight away: `sudo launchctl kickstart system/com.recipe-mcp.backup`.
+
+The backups sit on the same disk as the database, so they cover mistakes and a damaged
+database file, not a failed disk. Let Time Machine (or another off-machine copy) include
+`.private/backups/`; the copies hold the whole household collection, so keep that
+destination private too.
+
+**Restoring.** Stop the bot, put the backup in place of the database (removing the old
+`-wal` and `-shm` files with it), then start the bot again:
+
+```bash
+sudo launchctl bootout system/com.recipe-mcp.telegram
+mv data/recipes.db data/recipes.db.broken
+rm -f data/recipes.db-wal data/recipes.db-shm
+cp .private/backups/recipes-YYYY-MM-DD.db data/recipes.db
+chmod 600 data/recipes.db
+sudo launchctl bootstrap system /Library/LaunchDaemons/com.recipe-mcp.telegram.plist
+make doctor
+```

@@ -60,8 +60,7 @@ Where it could go next. Each is written up, with trade-offs and open questions, 
   from this fridge photo?"
 - **More ways in and more places to run:** chat with your recipes from the Claude app,
   and host the bot on Linux or a small cloud server instead of a Mac.
-- **Housekeeping:** automatic nightly backups and a warning before the Claude token
-  expires.
+- **Housekeeping:** a warning before the Claude token expires.
 
 ## What using it looks like
 
@@ -400,15 +399,14 @@ make eval
 ## Back up your recipes
 
 `data/recipes.db` is the whole collection: recipes, ratings, corrections and members.
-Copy it somewhere safe from time to time. SQLite's backup command is safe even while the
-bot is running:
+`make install-daemon` sets up a nightly backup to `.private/backups/` that keeps the last
+14 days, and `make backup` makes one by hand. Both are safe while the bot is running, and
+`make doctor` warns if the newest backup is more than a day and a half old. Restoring is
+covered in [deploy/README.md](deploy/README.md#backups).
 
-```bash
-sqlite3 data/recipes.db ".backup 'backup.db'"
-```
-
-Time Machine also works, as the database lives in your home folder. Keep backups
-somewhere private: they contain your whole household collection.
+Those copies live on the same disk, so also let Time Machine (or another off-machine
+backup) include the repository folder. Keep every copy private: it holds your whole
+household collection.
 
 ## Troubleshooting
 

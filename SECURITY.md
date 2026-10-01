@@ -109,6 +109,9 @@ asking the model to behave.
   account could read, with the `chmod` that fixes it. It checks modes only.
 
 - SQLite in WAL mode under `data/`, git-ignored. All queries are parameterised.
+- Nightly backups go to `.private/backups/` (git-ignored, inside the 700 folder) with mode
+  600, and the newest 14 are kept. They hold the whole collection, so any off-machine copy
+  of them needs the same care.
 - Migrations are forward-only and applied automatically at startup.
 - `.private/evals/` holds real recipes, queries and every correction; it is never
   committed and `make eval` reports it separately from the synthetic set.
