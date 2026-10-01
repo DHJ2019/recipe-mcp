@@ -114,6 +114,33 @@ asking the model to behave.
 - The public repository starts from a single commit with no personal identifiers; the
   private development history is not published. CI runs gitleaks on every push.
 
-## Reporting
+## Reporting a vulnerability
 
-This is a personal project; open an issue in the repository if you find a problem.
+Please don't open a public issue for a security problem. Report it privately through
+GitHub instead: [report a vulnerability](https://github.com/DHJ2019/recipe-mcp/security/advisories/new)
+(also under the repository's Security tab).
+
+- Say what you found, how to reproduce it and what it would let someone do.
+- Don't include real secrets, Telegram ids, chat exports, member files or private
+  recipes. Use placeholders; if a real value matters, say so and we can arrange another
+  way to share it.
+- This is a personal project looked after in spare time. Expect an acknowledgement
+  within a week.
+- Only the latest commit on `main` is supported. There are no releases or backports.
+
+Ordinary bugs that aren't security problems can go in a normal issue.
+
+### If a credential leaks
+
+Revoke it first; deleting it from a commit or a log does not undo the leak, because
+copies may already exist.
+
+- **Telegram bot token:** send `/revoke` to @BotFather, then put the new token in `.env`
+  and restart the daemon.
+- **Claude Code OAuth token or an OpenAI key:** revoke it with the service that issued it,
+  create a new one (`claude setup-token` for Claude Code) and update `.env`.
+- **NYT session:** sign out of other sessions from your NYT account, delete the browser
+  profile under `.private/` and run `make nyt-login` again.
+
+If the leak came from this code (for example a log line that printed a secret), please
+report it as above so it can be fixed for everyone.
