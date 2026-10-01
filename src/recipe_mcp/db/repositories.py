@@ -624,6 +624,28 @@ class ModelRunRepository:
             )
 
 
+class AppStateRepository:
+    """Operational values kept across restarts, such as the Telegram update offset."""
+
+    def __init__(self, db: Database) -> None:
+        self.db = db
+
+    def get(self, key: str) -> str | None:
+        row = self.db.connection.execute(
+            "SELECT value FROM app_state WHERE key = ?", (key,)
+        ).fetchone()
+        return str(row["value"]) if row else None
+
+    def set(self, key: str, value: str) -> None:
+        with self.db.transaction() as conn:
+            conn.execute(
+                "INSERT INTO app_state (key, value, updated_at) VALUES (?,?,?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value, "
+                "updated_at=excluded.updated_at",
+                (key, value, utcnow_iso()),
+            )
+
+
 class PendingInteractionRepository:
     """Per-chat conversation state. Rows are removed on expiry; nothing lives elsewhere."""
 

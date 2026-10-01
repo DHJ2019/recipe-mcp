@@ -37,6 +37,11 @@ simple approach helps future saves from proper recipe sites far more than old li
    protections (public addresses only, checked on every redirect, size cap), and fall
    back to today's title-plus-URL stub when a page has no recipe data. Add a backfill
    command that retries existing stubs. A few hours with tests.
+   **Prerequisite:** the title fetcher checks a host's addresses and then connects in a
+   second DNS lookup, so a hostile DNS server could answer differently the second time
+   (DNS rebinding). Today only a page `<title>` can come back, so the risk is small;
+   before fetching whole pages, connect only to the address that was checked, keeping
+   the original host name for TLS and the `Host` header, on every redirect.
 2. **Smart:** have Claude extract the recipe from pages without structured data. This
    reopens a door the security review closed: the bot's Claude Code has no web access so
    planted text on a page can't steer it. A safe design has the server fetch and strip the
@@ -213,11 +218,18 @@ Mirrors SPEC.md section 23; kept there as the decision record.
   `.env.example` do nothing yet.
 - Persistent pantry state, shopping lists, voice notes `deferred`
 - Private web reading interface `deferred`
+- Rate limits on brain runs `deferred`: per-member limits or a daily budget with a
+  warning. Not needed while the host handles one message at a time and only allowlisted
+  members can reach it; revisit if the group grows or a message loop appears.
 
 ---
 
 ## Done
 
+- Telegram update offset kept across restarts; `doctor` warns about readable secrets.
+- Input size limits on the write tools.
+- Private vulnerability reporting; SHA-pinned Actions, Dependabot and a weekly audit.
+- Brain failure output kept out of daemon logs; brain environment allowlisted.
 - Retry Telegram `getMe` at startup instead of crashing.
 - Brain runs on the subscription; Anthropic API keys stripped from its environment.
 - Daemon runs as the invoking user, not root.

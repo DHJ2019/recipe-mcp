@@ -166,6 +166,13 @@ def test_model_runs_and_cache(ctx: AppContext) -> None:
     assert ctx.model_runs.cache_get("t", "h", "v1", "m") == '{"x": 1}'
 
 
+def test_app_state_roundtrip(ctx: AppContext) -> None:
+    assert ctx.state.get("telegram_update_offset") is None
+    ctx.state.set("telegram_update_offset", "42")
+    ctx.state.set("telegram_update_offset", "43")
+    assert ctx.state.get("telegram_update_offset") == "43"
+
+
 def test_pending_interactions_are_per_chat_and_expire(ctx: AppContext) -> None:
     ctx.pending.put("-100123", "recent_results", {"ids": [3, 1]}, "2999-01-01T00:00:00+00:00")
     assert ctx.pending.get("-100123", "recent_results") == {"ids": [3, 1]}

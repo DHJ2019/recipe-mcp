@@ -56,6 +56,45 @@ def cmd_init_db(args: argparse.Namespace, settings: Settings) -> int:
         ctx.close()
 
 
+def exposed_to_others(path: Path, root: Path | None = None) -> bool:
+    """True when another account could read ``path``: it has group or other permission
+    bits and no folder above it (up to ``root``, default the filesystem root) is private
+    (mode 700) to its owner."""
+    try:
+        if path.stat().st_mode & 0o077 == 0:
+            return False
+        parents: list[Path] = list(path.resolve().parents)
+        if root is not None:
+            top = root.resolve()
+            parents = [p for p in parents if p == top or top in p.parents]
+        return not any(parent.stat().st_mode & 0o077 == 0 for parent in parents)
+    except OSError:
+        return False
+
+
+def private_paths(settings: Settings) -> list[Path]:
+    """Files and folders holding secrets or household data. Only modes are checked."""
+    paths = [
+        Path(".env"),
+        Path(".private"),
+        settings.members_path,
+        settings.private_evals_path,
+        settings.nyt_browser_profile_path,
+        settings.whatsapp_export_path,
+        settings.temp_media_dir,
+        BRAIN_WORKDIR,
+        BRAIN_WORKDIR / "mcp.json",
+    ]
+    if settings.database_path is not None:
+        db = settings.database_path
+        paths += [db.parent, db, db.with_name(db.name + "-wal"), db.with_name(db.name + "-shm")]
+    unique: dict[Path, None] = {}
+    for path in paths:
+        if path.exists():
+            unique.setdefault(path, None)
+    return list(unique)
+
+
 def cmd_doctor(args: argparse.Namespace, settings: Settings) -> int:
     ok = True
     print(f"recipe-mcp {__version__}")
@@ -159,6 +198,22 @@ def cmd_doctor(args: argparse.Namespace, settings: Settings) -> int:
             print(f"       {'ok  ' if status.ok else 'warn'} {status.summary()}")
         if not settings.missing_for("telegram"):
             print("       (Telegram token validity is checked by `make smoke`)")
+
+        print("\nFile permissions (modes only, never contents):")
+        exposed: list[Path] = []
+        for path in private_paths(settings):
+            # Fixing a folder protects everything inside it, so name only the folder.
+            covered = any(e.resolve() in path.resolve().parents for e in exposed)
+            if not covered and exposed_to_others(path):
+                exposed.append(path)
+        for path in exposed:
+            mode = path.stat().st_mode & 0o777
+            fix = "700" if path.is_dir() else "600"
+            print(
+                f"  warn {path} is readable by other accounts (mode {mode:o}); chmod {fix} {path}"
+            )
+        if not exposed:
+            print("  ok   secrets and household data are private to this account")
     finally:
         ctx.close()
     print("\n" + ("All core checks passed." if ok else "Some core checks failed."))

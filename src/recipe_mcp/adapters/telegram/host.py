@@ -33,6 +33,7 @@ RESULTS_TTL_HOURS = 12
 POLL_TIMEOUT_SECONDS = 30
 STARTUP_RETRY_INITIAL_SECONDS = 2
 STARTUP_RETRY_MAX_SECONDS = 30
+OFFSET_KEY = "telegram_update_offset"
 
 
 def _expires(minutes: int = 0, hours: int = 0) -> str:
@@ -52,7 +53,8 @@ class TelegramHost:
         self.api = api
         self.brain = brain
         self._sleep = sleep
-        self.offset: int | None = None
+        saved = ctx.state.get(OFFSET_KEY)
+        self.offset: int | None = int(saved) if saved else None
 
     # -- polling loop -----------------------------------------------------
 
@@ -94,7 +96,11 @@ class TelegramHost:
     def poll_once(self) -> int:
         updates = self.api.get_updates(self.offset, POLL_TIMEOUT_SECONDS)
         for update in updates:
+            # Saved before handling: after a restart Telegram resends nothing already
+            # started, so a reply is never sent twice and a message that crashes the
+            # host cannot crash it again on every restart.
             self.offset = int(update["update_id"]) + 1
+            self.ctx.state.set(OFFSET_KEY, str(self.offset))
             self.handle_update(update)
         return len(updates)
 
