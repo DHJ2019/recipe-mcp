@@ -3,6 +3,7 @@ from pathlib import Path
 
 from recipe_mcp.providers.agent_brain import (
     MCP_TOOL_NAMES,
+    MODEL_ERROR,
     BrainRequest,
     ClaudeCodeBrain,
     FakeBrain,
@@ -45,7 +46,7 @@ def test_parse_claude_json_variants() -> None:
     assert reply.text == "Soup it is." and reply.recipe_ids == [2]
     assert reply.duration_ms == 1200 and reply.cost_usd == 0.01 and reply.error is None
     err = parse_claude_json('{"result": "Something broke", "is_error": true}')
-    assert err.error == "Something broke"
+    assert err.error == MODEL_ERROR and err.diagnostic == "Something broke"
     plain = parse_claude_json("plain text\nRECIPES: none", 5)
     assert plain.text == "plain text" and plain.recipe_ids == [] and plain.duration_ms == 5
 
@@ -86,25 +87,33 @@ def test_claude_code_brain_reports_failures(tmp_path: Path) -> None:
     assert missing.reply(BrainRequest("c", None, "x", "hi")).error is not None
 
     def failing(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="boom")
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="boom: pasta for Sam")
 
     def slow(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
         raise subprocess.TimeoutExpired(cmd, 1)
 
     cfg = tmp_path / ".mcp.json"
     cfg.write_text("{}")
-    assert "boom" in (
-        ClaudeCodeBrain("python3", tmp_path, cfg, runner=failing)
-        .reply(BrainRequest("c", None, "x", "hi"))
-        .error
-        or ""
+    failed = ClaudeCodeBrain("python3", tmp_path, cfg, runner=failing).reply(
+        BrainRequest("c", None, "x", "hi")
     )
+    # The daemon logs `error`; the subprocess output can quote the conversation.
+    assert failed.error == "exit 1"
+    assert failed.diagnostic == "boom: pasta for Sam"
     assert "timed out" in (
         ClaudeCodeBrain("python3", tmp_path, cfg, runner=slow, timeout_seconds=1)
         .reply(BrainRequest("c", None, "x", "hi"))
         .error
         or ""
     )
+
+
+def test_model_error_text_stays_out_of_the_logged_error() -> None:
+    stdout = '{"is_error": true, "result": "Sam asked about the lamb tagine"}'
+    reply = parse_claude_json(stdout)
+    assert reply.error == MODEL_ERROR
+    assert "tagine" not in (reply.error or "")
+    assert reply.diagnostic == "Sam asked about the lamb tagine"
 
 
 def test_fake_brain_records_requests() -> None:
@@ -171,3 +180,4 @@ def test_brain_mcp_config_uses_absolute_paths(tmp_path: Path) -> None:
     assert server["args"][:2] == ["--directory", str(repo)]
     assert str(repo / ".env") in server["args"]
     assert (tmp_path / "brain").stat().st_mode & 0o077 == 0  # private to the user
+    assert path.stat().st_mode & 0o777 == 0o600
