@@ -96,8 +96,8 @@ asking the model to behave.
 
 ## Database and private evals
 
-- `make setup` sets `data/` and `.private/` to mode 700 so other accounts on the Mac can't
-  read recipes, member ids or exports.
+- `make setup` sets `data/` and `.private/` to mode 700 and `.env` to mode 600, so other
+  accounts on the Mac can't read recipes, member ids, exports or secrets.
 
 - SQLite in WAL mode under `data/`, git-ignored. All queries are parameterised.
 - Migrations are forward-only and applied automatically at startup.
@@ -106,8 +106,11 @@ asking the model to behave.
 
 ## Dependencies and history
 
-- Dependencies are locked in `uv.lock`; `uvx pip-audit` against the export found no known
-  vulnerabilities (2026-09-24).
+- Dependencies are locked in `uv.lock`. A weekly CI job (`dependency-audit`) runs
+  `pip-audit` over every locked package, including optional extras, and also runs on
+  pull requests that change dependencies. Dependabot alerts cover the same lockfile.
+- GitHub Actions are pinned to full commit SHAs, so a moved tag can't change what runs
+  in CI. Dependabot proposes updates to the pins.
 - The public repository starts from a single commit with no personal identifiers; the
   private development history is not published. CI runs gitleaks on every push.
 
