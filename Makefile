@@ -2,7 +2,7 @@
 UV ?= uv
 RUN := $(UV) run
 
-.PHONY: help setup doctor demo test lint typecheck eval smoke import-whatsapp categorize refresh-dietary categorization-report serve serve-telegram install-daemon nyt-login clean
+.PHONY: help setup doctor demo test lint typecheck eval smoke import-whatsapp categorize refresh-dietary categorization-report serve serve-telegram install-daemon backup nyt-login clean
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'
@@ -60,8 +60,11 @@ serve: ## Start the MCP server over stdio (what MCP clients invoke)
 serve-telegram: ## Start the Telegram long-polling host (Stage 3)
 	$(RUN) --env-file .env recipe-mcp serve-telegram
 
-install-daemon: ## Render the launchd plist for the Mac mini and print the install steps
+install-daemon: ## Render the launchd plists (bot and nightly backup) and print the install steps
 	$(RUN) recipe-mcp install-daemon
+
+backup: ## Back up the database to BACKUP_DIR, keeping the newest BACKUP_KEEP copies
+	$(RUN) recipe-mcp backup
 
 nyt-login: ## One-time interactive NYT sign-in in the dedicated browser profile
 	$(UV) sync --extra browser

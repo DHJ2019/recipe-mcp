@@ -128,6 +128,8 @@ class Settings(BaseSettings):
     whatsapp_export_path: Path = Path(".private/whatsapp-export.txt")
     private_evals_path: Path = Path(".private/evals")
     temp_media_dir: Path = Path(".private/tmp-media")
+    backup_dir: Path = Path(".private/backups")
+    backup_keep: int = 14
     members_path: Path = DEFAULT_MEMBERS_FILE
 
     @field_validator("database_url")
@@ -135,6 +137,13 @@ class Settings(BaseSettings):
     def _validate_database_url(cls, value: str) -> str:
         if not value.startswith("sqlite:///"):
             raise ValueError("DATABASE_URL must be a sqlite:/// URL in this release")
+        return value
+
+    @field_validator("backup_keep")
+    @classmethod
+    def _validate_backup_keep(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("BACKUP_KEEP must be at least 1")
         return value
 
     @field_validator("classification_confidence_threshold")
@@ -266,6 +275,8 @@ class Settings(BaseSettings):
             "WHATSAPP_EXPORT_PATH": str(self.whatsapp_export_path),
             "PRIVATE_EVALS_PATH": str(self.private_evals_path),
             "TEMP_MEDIA_DIR": str(self.temp_media_dir),
+            "BACKUP_DIR": str(self.backup_dir),
+            "BACKUP_KEEP": str(self.backup_keep),
         }
 
 

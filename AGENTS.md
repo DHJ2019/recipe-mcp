@@ -66,7 +66,8 @@ make eval         # synthetic evals always; private evals when .private/evals ex
 make smoke        # opt-in live checks; each reports the missing variable names
 make import-whatsapp / categorize / refresh-dietary / categorization-report
 make serve        # MCP server over stdio (uv run --env-file .env recipe-mcp serve)
-make serve-telegram / install-daemon   # long-polling host and Mac mini launchd plist
+make serve-telegram / install-daemon   # long-polling host; launchd plists (bot + nightly backup)
+make backup       # copy the database to .private/backups/, keeping the newest 14
 make nyt-login    # one-time NYT sign-in; syncs the optional `browser` extra
 uv run recipe-mcp smoke --brain        # one real headless Claude Code reply
 ```

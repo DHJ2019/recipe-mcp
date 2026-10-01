@@ -23,6 +23,7 @@ from recipe_mcp.settings import MissingConfigError, Settings, env_file_problems,
 Handler = Callable[[argparse.Namespace, Settings], int]
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DAEMON_PLIST = REPO_ROOT / "deploy" / "com.recipe-mcp.telegram.plist"
+BACKUP_PLIST = REPO_ROOT / "deploy" / "com.recipe-mcp.backup.plist"
 
 
 def _ctx(settings: Settings) -> AppContext:
@@ -82,6 +83,7 @@ def private_paths(settings: Settings) -> list[Path]:
         settings.nyt_browser_profile_path,
         settings.whatsapp_export_path,
         settings.temp_media_dir,
+        settings.backup_dir,
         BRAIN_WORKDIR,
         BRAIN_WORKDIR / "mcp.json",
     ]
@@ -198,6 +200,29 @@ def cmd_doctor(args: argparse.Namespace, settings: Settings) -> int:
             print(f"       {'ok  ' if status.ok else 'warn'} {status.summary()}")
         if not settings.missing_for("telegram"):
             print("       (Telegram token validity is checked by `make smoke`)")
+
+        print("\nBackups:")
+        if settings.database_path is None:
+            print("  ok   in-memory database; nothing to back up")
+        else:
+            from datetime import UTC, datetime
+
+            from recipe_mcp.services.backups import STALE_AFTER, newest_backup_age
+
+            age = newest_backup_age(settings.backup_dir, datetime.now(UTC))
+            if age is None:
+                print(
+                    f"  warn no backups in {settings.backup_dir}; run `make backup`, and "
+                    "`make install-daemon` for the nightly job"
+                )
+            elif age > STALE_AFTER:
+                hours = int(age.total_seconds() // 3600)
+                print(
+                    f"  warn newest backup is {hours} hours old; check the nightly job "
+                    "(/Library/Logs/recipe-mcp/backup.log)"
+                )
+            else:
+                print(f"  ok   newest backup is {int(age.total_seconds() // 3600)} hours old")
 
         print("\nFile permissions (modes only, never contents):")
         exposed: list[Path] = []
@@ -362,11 +387,17 @@ def cmd_nyt_login(args: argparse.Namespace, settings: Settings) -> int:
     return 0 if status.ok else 1
 
 
-def render_daemon_plist(user: str, home: Path, uv_path: str, repo_root: Path = REPO_ROOT) -> str:
-    """Fill the LaunchDaemon template. The job starts at boot but runs as ``user``, so the
+def render_daemon_plist(
+    user: str,
+    home: Path,
+    uv_path: str,
+    repo_root: Path = REPO_ROOT,
+    template: Path = DAEMON_PLIST,
+) -> str:
+    """Fill a LaunchDaemon template. The job starts at boot but runs as ``user``, so the
     database, the uv cache and the Claude Code login all stay that user's."""
     return (
-        DAEMON_PLIST.read_text(encoding="utf-8")
+        template.read_text(encoding="utf-8")
         .replace("__REPO_ROOT__", str(repo_root))
         .replace("__UV_PATH__", uv_path)
         .replace("__USER__", user)
@@ -383,24 +414,54 @@ def cmd_install_daemon(args: argparse.Namespace, settings: Settings) -> int:
             file=sys.stderr,
         )
         return 2
-    target = Path("/Library/LaunchDaemons/com.recipe-mcp.telegram.plist")
     uv_path = shutil.which("uv") or "/opt/homebrew/bin/uv"
-    rendered = render_daemon_plist(user, Path.home(), uv_path)
-    out = Path(args.out) if args.out else Path(".private/com.recipe-mcp.telegram.plist")
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(rendered, encoding="utf-8")
-    print(f"Rendered LaunchDaemon plist to {out} (runs as {user}, starts at boot)")
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rendered: list[Path] = []
+    for template in (DAEMON_PLIST, BACKUP_PLIST):
+        out = out_dir / template.name
+        rendered_text = render_daemon_plist(user, Path.home(), uv_path, template=template)
+        out.write_text(rendered_text, encoding="utf-8")
+        rendered.append(out)
+    print(f"Rendered LaunchDaemon plists to {out_dir} (both run as {user}):")
+    print(f"  {rendered[0].name}: the Telegram bot, started at boot")
+    print(f"  {rendered[1].name}: the nightly database backup at 03:17")
     if settings.claude_code_oauth_token is None:
         print(
             "\nwarning: CLAUDE_CODE_OAUTH_TOKEN is not set in .env. Before anyone logs in "
             "after a reboot the macOS keychain is locked, so `claude -p` cannot read your "
             "login. Run `claude setup-token` and put the token in .env."
         )
-    print("\nInstall it with (requires sudo; see deploy/README.md):")
+    print("\nInstall them with (requires sudo; see deploy/README.md):")
     print("  sudo mkdir -p /Library/Logs/recipe-mcp")
     print(f"  sudo chown {user} /Library/Logs/recipe-mcp")
-    print(f"  sudo cp {out} {target}")
-    print(f"  sudo launchctl bootstrap system {target}")
+    for out in rendered:
+        target = Path("/Library/LaunchDaemons") / out.name
+        print(f"  sudo cp {out} {target}")
+        print(f"  sudo launchctl bootstrap system {target}")
+    print("(If one is already installed, `sudo launchctl bootout system/<label>` it first.)")
+    return 0
+
+
+def cmd_backup(args: argparse.Namespace, settings: Settings) -> int:
+    from datetime import date
+
+    from recipe_mcp.db.backup import BackupError
+    from recipe_mcp.services.backups import run_backup
+
+    if settings.database_path is None:
+        print("The database is in memory; there is nothing to back up.", file=sys.stderr)
+        return 2
+    try:
+        result = run_backup(
+            settings.database_path, settings.backup_dir, settings.backup_keep, date.today()
+        )
+    except BackupError as exc:
+        print(f"backup failed: {exc}", file=sys.stderr)
+        return 1
+    print(f"Backed up {settings.database_path} to {result.path} ({result.size_bytes:,} bytes)")
+    for old in result.removed:
+        print(f"  removed {old.name} (keeping {settings.backup_keep})")
     return 0
 
 
@@ -721,8 +782,9 @@ def build_parser() -> argparse.ArgumentParser:
         "--timeout", type=float, default=300.0, help="seconds to wait for sign-in (default: 300)"
     )
     nyt.add_argument("--force", action="store_true", help="sign in again even if a session exists")
-    daemon = add("install-daemon", "render the launchd plist for the Mac mini", cmd_install_daemon)
-    daemon.add_argument("--out", help="where to write the rendered plist")
+    daemon = add("install-daemon", "render the launchd plists for the Mac mini", cmd_install_daemon)
+    daemon.add_argument("--out-dir", default=".private", help="where to write the rendered plists")
+    add("backup", "back up the database and keep the newest BACKUP_KEEP copies", cmd_backup)
     add("eval", "run the synthetic (and private, if present) evaluation sets", cmd_eval)
     smoke = add("smoke", "opt-in live smoke tests", cmd_smoke)
     smoke.add_argument("--nyt-url", help="NYT Cooking recipe URL to fetch live")

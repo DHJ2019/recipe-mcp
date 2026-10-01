@@ -1095,7 +1095,8 @@ The Mac mini is the only runtime host. Everything below is documented in `deploy
 
 - `make doctor` is the first thing to run after any change or reboot. It also warns when `.env`, `.private/`, the database or its folder can be read by other accounts, naming the path, its mode and the `chmod` that fixes it; it never reads the files.
 - `make smoke` sends one test message to the group and expects a reply within 30 seconds.
-- Database backups: a nightly `launchd` job copies `data/recipes.db` to `.private/backups/` using SQLite’s online backup API, keeping 14 days.
+- Database backups: `recipe-mcp backup` (`make backup`) copies the database with SQLite’s online backup API, which is safe while the bot is running, to `BACKUP_DIR` (default `.private/backups/`) as `recipes-YYYY-MM-DD.db`. It writes to a temporary file, runs `PRAGMA integrity_check` on the copy and only then renames it into place, sets it to mode 600, and keeps the newest `BACKUP_KEEP` files (default 14). A second LaunchDaemon, `com.recipe-mcp.backup`, runs it nightly at 03:17 as the same user; `make install-daemon` renders both plists. `make doctor` warns when there is no backup or the newest is more than 36 hours old.
+- Backups sit on the same disk, so they cover mistakes and a damaged database file, not a failed disk. Time Machine or another off-machine copy of `.private/backups/` covers that.
 - Upgrades: `git pull`, `uv sync`, `make test`, `sudo launchctl kickstart -k system/com.recipe-mcp.telegram`.
 
 ---
