@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from recipe_mcp.db.repositories import RecipeRepository
-from recipe_mcp.domain import taxonomy
+from recipe_mcp.domain import limits, taxonomy
 from recipe_mcp.domain.ingredients import canonical_name, ingredient_matches, normalize_line
 from recipe_mcp.domain.models import (
     IngredientFlags,
@@ -67,6 +67,12 @@ class CorrectionService:
             raise CorrectionError(f"recipe {recipe_id} not found")
         if not facet_corrections and not field_updates:
             raise CorrectionError("nothing to correct: pass facet_corrections or field_updates")
+        # Checked up front: food_types writes inside the loop below.
+        try:
+            limits.check_facets("facet_corrections", facet_corrections)
+            limits.check_field_updates(field_updates)
+        except limits.InputTooLarge as exc:
+            raise CorrectionError(str(exc)) from exc
         changes: list[str] = []
         before = {
             "facets": recipe.classification_summary(),
@@ -194,6 +200,10 @@ class CorrectionService:
             raise CorrectionError(f"recipe {recipe_id} not found")
         if not facets:
             raise CorrectionError("nothing proposed: pass facet_corrections")
+        try:
+            limits.check_facets("facet_corrections", facets)
+        except limits.InputTooLarge as exc:
+            raise CorrectionError(str(exc)) from exc
         if "dietary_suitability" in facets:
             raise CorrectionError(
                 "dietary_suitability is derived from ingredients; correct the ingredients"

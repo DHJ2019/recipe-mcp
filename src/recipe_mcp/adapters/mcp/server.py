@@ -17,6 +17,7 @@ from recipe_mcp.adapters.mcp.schemas import (
     RecommendRecipesOut,
     SaveRecipeOut,
 )
+from recipe_mcp.domain.limits import InputTooLarge
 from recipe_mcp.domain.models import FacetSource, Recipe, RecommendationRequest, Sentiment
 from recipe_mcp.services.container import AppContext
 from recipe_mcp.services.corrections import CorrectionError
@@ -246,7 +247,7 @@ def build_server(ctx: AppContext) -> MCPServer[Any]:
                 notes=notes,
                 reported_by_member_id=speaker_id if subject_id != speaker_id else None,
             )
-        except LookupError as exc:
+        except (LookupError, InputTooLarge) as exc:
             raise ToolError(str(exc)) from exc
         recipe = ctx.recipes.get(recipe_id)
         return RateRecipeOut(

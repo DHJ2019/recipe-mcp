@@ -87,6 +87,10 @@ asking the model to behave.
   Code, Codex, or the Telegram host). It opens no network port.
 - `save_recipe`, `rate_recipe` and `correct_recipe` write to the local SQLite file;
   there is no delete tool. Tool results never include configuration values.
+- Those three tools reject oversized titles, ingredient lists, notes and classifications
+  (limits in `domain/limits.py`, listed in SPEC.md), so a crafted message can't make the
+  brain store arbitrarily large values. Nothing is truncated, and a rejected correction
+  changes nothing.
 - The MCP client configuration launches `uv run --env-file .env recipe-mcp serve` from
   the repository, so the model key stays in `.env` and out of client config files.
 

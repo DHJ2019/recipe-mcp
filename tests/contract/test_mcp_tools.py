@@ -229,6 +229,61 @@ async def test_correct_recipe_overrides_and_fills_time(seeded_ctx: AppContext) -
     assert bad_facet.is_error and empty.is_error and missing.is_error
 
 
+def _error_text(result: CallToolResult) -> str:
+    assert result.is_error
+    return " ".join(getattr(c, "text", "") for c in result.content)
+
+
+async def test_write_tools_reject_oversized_input_without_storing_it(
+    seeded_ctx: AppContext,
+) -> None:
+    household = seeded_ctx.household_id
+    before = len(seeded_ctx.recipes.list_for_household(household))
+    recipe = seeded_ctx.recipes.get(2)
+    assert recipe is not None
+    huge = "pasta night " * 400  # 4,800 characters
+    async with Client(build_server(seeded_ctx)) as client:
+        long_title = await client.call_tool(
+            "save_recipe", {"input": "x", "title": huge, "ingredients": ["salt"]}
+        )
+        many_ingredients = await client.call_tool(
+            "save_recipe", {"input": "x", "title": "Soup", "ingredients": ["salt"] * 101}
+        )
+        long_input = await client.call_tool("save_recipe", {"input": "x" * 20_001})
+        long_note = await client.call_tool(
+            "rate_recipe", {"recipe_id": 2, "member": "alex", "sentiment": "like", "notes": huge}
+        )
+        partial = await client.call_tool(
+            "correct_recipe",
+            {
+                "recipe_id": 2,
+                "field_updates": {"title": "Renamed", "notes": [huge]},
+                "member": "alex",
+            },
+        )
+        proposal = await client.call_tool(
+            "correct_recipe",
+            {
+                "recipe_id": 2,
+                "facet_corrections": {"character": ["light"] * 21},
+                "proposed_by_agent": True,
+            },
+        )
+    assert "title is longer than 300 characters" in _error_text(long_title)
+    assert "ingredients has more than 100 entries" in _error_text(many_ingredients)
+    assert "input is longer than" in _error_text(long_input)
+    assert "notes is longer than" in _error_text(long_note)
+    assert "notes is longer than" in _error_text(partial)
+    assert "facet_corrections.character" in _error_text(proposal)
+    for result in (long_title, long_note, partial):
+        assert "pasta night" not in _error_text(result)
+    # Nothing was stored: no new recipe, no rating, and no half-applied correction.
+    assert len(seeded_ctx.recipes.list_for_household(household)) == before
+    assert seeded_ctx.feedback_service.summary(2).members == []
+    after = seeded_ctx.recipes.get(2)
+    assert after is not None and after.title == recipe.title
+
+
 @pytest.mark.parametrize("name", TOOL_NAMES)
 async def test_every_tool_has_description(seeded_ctx: AppContext, name: str) -> None:
     async with Client(build_server(seeded_ctx)) as client:
