@@ -10,6 +10,7 @@ help: ## Show available targets
 setup: ## Install dependencies, create .env (never overwrites), initialise the database
 	$(UV) sync
 	@if [ ! -f .env ]; then cp .env.example .env && echo "Created .env from .env.example"; else echo ".env already exists; leaving it untouched"; fi
+	@chmod 600 .env
 	@mkdir -p data .private/tmp-media
 	@chmod 700 data .private
 	$(RUN) recipe-mcp init-db
