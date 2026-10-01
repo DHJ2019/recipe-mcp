@@ -3,7 +3,9 @@ from recipe_mcp.domain.taxonomy import Facet, effort_for_minutes, normalize_valu
 
 def test_normalize_value_controlled_and_other() -> None:
     assert normalize_value(Facet.CUISINE, " Thai ") == ("thai", None)
-    assert normalize_value(Facet.CUISINE, "Vietnamese") == ("other", "vietnamese")
+    assert normalize_value(Facet.CUISINE, "Ethiopian") == ("other", "ethiopian")
+    assert normalize_value(Facet.CUISINE, "Chinese") == ("chinese", None)
+    assert normalize_value(Facet.CUISINE, "Vietnamese") == ("vietnamese", None)
     assert normalize_value(Facet.CHARACTER, "umami") == ("", "umami")
     assert normalize_value(Facet.PRIMARY_INGREDIENT, "Salmon") == ("salmon", None)
 

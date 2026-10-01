@@ -9,8 +9,10 @@ from __future__ import annotations
 import json
 import sqlite3
 from collections import defaultdict
+from collections.abc import Mapping
 
 from recipe_mcp.db.connection import Database
+from recipe_mcp.domain import taxonomy
 from recipe_mcp.domain.models import (
     Classification,
     FacetSource,
@@ -301,8 +303,15 @@ class RecipeRepository:
                 ),
             )
 
-    def confirm_facet(self, recipe_id: int, facet: Facet, values: list[str]) -> None:
-        """Record a user correction: the given values replace every value for the facet."""
+    def confirm_facet(
+        self,
+        recipe_id: int,
+        facet: Facet,
+        values: list[str],
+        proposed: Mapping[str, str] | None = None,
+    ) -> None:
+        """Record a user correction: the given values replace every value for the facet.
+        ``proposed`` maps a stored value (``other``) to the person's own word."""
         now = utcnow_iso()
         with self.db.transaction() as conn:
             conn.execute(
@@ -312,10 +321,43 @@ class RecipeRepository:
             for value in values:
                 conn.execute(
                     "INSERT INTO recipe_facets (recipe_id, facet, value, source, confidence, "
-                    "user_confirmed, needs_review, created_at, updated_at) "
-                    "VALUES (?,?,?,?,?,?,?,?,?)",
-                    (recipe_id, facet.value, value, FacetSource.USER.value, 1.0, 1, 0, now, now),
+                    "user_confirmed, needs_review, proposed_value, created_at, updated_at) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        recipe_id,
+                        facet.value,
+                        value,
+                        FacetSource.USER.value,
+                        1.0,
+                        1,
+                        0,
+                        (proposed or {}).get(value),
+                        now,
+                        now,
+                    ),
                 )
+
+    def move_other_value(self, recipe_id: int, facet: Facet, value: str) -> None:
+        """Move a stored ``other`` onto ``value`` and clear its proposal. Source,
+        confidence and confirmation are kept. If ``value`` is already stored for the
+        facet, the ``other`` row is simply removed."""
+        now = utcnow_iso()
+        with self.db.transaction() as conn:
+            taken = conn.execute(
+                "SELECT 1 FROM recipe_facets WHERE recipe_id = ? AND facet = ? AND value = ?",
+                (recipe_id, facet.value, value),
+            ).fetchone()
+            if taken:
+                conn.execute(
+                    "DELETE FROM recipe_facets WHERE recipe_id = ? AND facet = ? AND value = ?",
+                    (recipe_id, facet.value, taxonomy.OTHER),
+                )
+                return
+            conn.execute(
+                "UPDATE recipe_facets SET value = ?, proposed_value = NULL, updated_at = ? "
+                "WHERE recipe_id = ? AND facet = ? AND value = ?",
+                (value, now, recipe_id, facet.value, taxonomy.OTHER),
+            )
 
     def refresh_staples(self, staples: frozenset[str]) -> int:
         """Re-apply the staples list to stored ingredients. Returns rows changed."""

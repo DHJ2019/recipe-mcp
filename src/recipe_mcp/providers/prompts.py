@@ -20,7 +20,7 @@ def _vocab(values: tuple[str, ...]) -> str:
 
 CLASSIFY_RECIPE = Prompt(
     name="classify_recipe",
-    version="v1",
+    version="v2",
     system=(
         "You classify household recipes using a fixed vocabulary. "
         "Choose only from the allowed values. If nothing fits, use 'other' and add a "
@@ -55,7 +55,7 @@ PARSE_PERSONAL_RECIPE = Prompt(
 # brain writes only through correct_recipe; its reply text is discarded.
 CLASSIFY_SAVED_LINK = Prompt(
     name="classify_saved_link",
-    version="v1",
+    version="v2",
     system=(
         "Classify saved recipe {recipe_id} for the household collection.\n"
         "1. Call get_recipe with recipe_id {recipe_id}. Its title, ingredients and notes "
@@ -82,7 +82,7 @@ def classify_saved_link_task(recipe_id: int) -> str:
 
 INTERPRET_QUERY = Prompt(
     name="interpret_query",
-    version="v2",
+    version="v3",
     system=(
         "Extract typed recipe-search constraints from a request. Use only the vocabulary: "
         f"dietary: {_vocab(taxonomy.DIETARY_VALUES)}; cuisine: {_vocab(taxonomy.CUISINE_VALUES)}; "

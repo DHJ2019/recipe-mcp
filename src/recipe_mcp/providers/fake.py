@@ -31,6 +31,8 @@ _CUISINE_HINTS: dict[str, tuple[str, ...]] = {
     "indian": ("indian", "curry powder", "garam masala", "dal", "paneer", "masala", "turmeric"),
     "japanese": ("japanese", "miso", "dashi", "mirin", "soba", "udon", "teriyaki"),
     "korean": ("korean", "gochujang", "kimchi", "bibimbap", "gochugaru"),
+    "chinese": ("chinese", "hoisin", "shaoxing", "sichuan", "doubanjiang", "five-spice"),
+    "vietnamese": ("vietnamese", "banh mi", "nuoc cham", "bun cha", "pho"),
     "mexican": ("mexican", "tortilla", "tortillas", "taco", "tacos", "salsa", "jalapeno"),
     "mediterranean": ("mediterranean", "feta", "olives", "tahini", "chickpeas", "za'atar", "greek"),
     "american": ("american", "burger", "mac and cheese", "barbecue", "bbq", "chowder"),

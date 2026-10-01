@@ -57,7 +57,7 @@ def test_host_task_prompt_has_no_member_framing() -> None:
 
 
 def test_classify_saved_link_task_is_versioned_and_complete() -> None:
-    assert CLASSIFY_SAVED_LINK.version == "v1"
+    assert CLASSIFY_SAVED_LINK.version == "v2"
     task = classify_saved_link_task(42)
     assert (
         "get_recipe with recipe_id 42" in task and "correct_recipe once with recipe_id 42" in task

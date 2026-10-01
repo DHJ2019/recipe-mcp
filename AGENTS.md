@@ -66,6 +66,7 @@ make eval         # synthetic evals always; private evals when .private/evals ex
 make smoke        # opt-in live checks; each reports the missing variable names
 make import-whatsapp / categorize / refresh-dietary / categorization-report
 make classify-backlog  # brain classifies unclassified recipes (ARGS="--dry-run" or "--limit 5")
+make refresh-taxonomy  # move stored "other" values onto newly added vocabulary (ARGS=--dry-run)
 make serve        # MCP server over stdio (uv run --env-file .env recipe-mcp serve)
 make serve-telegram / install-daemon   # long-polling host; launchd plists (bot + nightly backup)
 make backup       # copy the database to .private/backups/, keeping the newest 14

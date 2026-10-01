@@ -266,6 +266,16 @@ git-ignored.
    make classify-backlog
    ```
 
+8. A value the vocabulary doesn't have yet (a cuisine such as "ethiopian") is stored as
+   `other` with the proposed word kept beside it. See what is parked there, and after a
+   value is added to `src/recipe_mcp/domain/taxonomy.py`, move those recipes onto it
+   without another brain run:
+
+   ```
+   make refresh-taxonomy ARGS=--dry-run   # what would move, and what is still "other"
+   make refresh-taxonomy
+   ```
+
 ## Level 3: optional live integrations
 
 Each integration is optional and independent. `make doctor` shows which are configured;

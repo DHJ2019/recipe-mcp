@@ -30,6 +30,8 @@ CUISINE_VALUES: tuple[str, ...] = (
     "indian",
     "japanese",
     "korean",
+    "chinese",
+    "vietnamese",
     "mexican",
     "mediterranean",
     "american",

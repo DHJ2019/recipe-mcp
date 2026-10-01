@@ -33,7 +33,7 @@ def test_fake_classification_validates_and_respects_taxonomy() -> None:
     assert "cozy" in out.character
     assert out.effort == "weeknight"
     assert 0 <= out.confidence <= 1
-    assert response.prompt_version == "v1"
+    assert response.prompt_version == "v2"
 
 
 def test_fake_draft_does_not_invent_details() -> None:
