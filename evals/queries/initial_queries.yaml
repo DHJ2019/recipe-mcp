@@ -1,4 +1,4 @@
-# The 10 initial recommendation requests from SPEC.md section 18, with the typed
+# The 10 initial recommendation requests from docs/product-specs/recipe-mcp.md section 18, with the typed
 # constraints the model is expected to extract and the synthetic recipes that
 # should appear in the top three. `expected_constraints` is checked against the
 # offline fake model; live model extraction is compared by `make smoke`.
