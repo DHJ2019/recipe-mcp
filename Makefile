@@ -2,7 +2,7 @@
 UV ?= uv
 RUN := $(UV) run
 
-.PHONY: help setup doctor demo test lint typecheck eval smoke import-whatsapp categorize classify-backlog refresh-dietary refresh-taxonomy categorization-report serve serve-telegram install-daemon backup nyt-login clean
+.PHONY: help check setup doctor demo test lint typecheck eval smoke import-whatsapp categorize classify-backlog refresh-dietary refresh-taxonomy categorization-report serve serve-telegram install-daemon backup nyt-login clean
 
 help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-24s\033[0m %s\n", $$1, $$2}'
@@ -21,6 +21,8 @@ doctor: ## Check configuration, database, MCP startup and fixtures without print
 
 demo: ## Load synthetic recipes and run one sample recommendation
 	$(RUN) recipe-mcp demo
+
+check: lint typecheck test eval ## Every check CI runs: lint, typecheck, tests, offline evals
 
 test: ## Run the offline test suite (no credentials required)
 	$(RUN) pytest -q

@@ -6,7 +6,7 @@ get three grounded recommendations by ingredients, time, dietary needs and mood,
 what you cooked, and correct anything the classifier got wrong. The same store is
 reachable from a shared Telegram group, Codex and Claude Code.
 
-The full design is in [SPEC.md](SPEC.md) (v3.5). There is no hosted model API anywhere in
+The full design is in [the spec](docs/product-specs/recipe-mcp.md) (v3.5). There is no hosted model API anywhere in
 the application: the MCP server is deterministic, and the semantic work is done by the
 agent that calls it. At a terminal that agent is Claude Code or Codex. In the Telegram
 group it is a headless `claude -p` run on your always-on Mac using your own subscription.
@@ -51,7 +51,7 @@ Level 1 below still needs no keys or accounts at all.
 ## Future ideas
 
 Where it could go next. Each is written up, with trade-offs and open questions, in
-[IDEAS.md](IDEAS.md):
+the [spec's Roadmap](docs/product-specs/recipe-mcp.md#19-roadmap):
 
 - **Recipes beyond NYT Cooking:** read recipe data from other sites, and fill in links
   already saved from blogs, newspapers and videos.
@@ -375,7 +375,7 @@ headless Claude Code turn with the last ten turns and last result list as contex
 **Always-on deployment.** Run the bot on an always-on Mac (Mac mini, iMac or a laptop
 that stays awake). See [deploy/README.md](deploy/README.md) and `make install-daemon`
 (run it as your normal user; the daemon starts at boot and runs as you). The daemon uses
-launchd, so it is macOS only; Linux or cloud hosting is an idea in [IDEAS.md](IDEAS.md).
+launchd, so it is macOS only; Linux or cloud hosting is an idea in the [Roadmap](docs/product-specs/recipe-mcp.md#19-roadmap).
 
 **Restarting with FileVault on.** If the Mac uses FileVault, a normal restart stops at the
 disk unlock screen and nothing, including the bot, runs until someone types the password.
@@ -387,11 +387,11 @@ sudo fdesetup authrestart
 ```
 
 After a power cut the Mac still waits at the unlock screen. Turning FileVault off, or
-hosting elsewhere, are the alternatives; see [IDEAS.md](IDEAS.md).
+hosting elsewhere, are the alternatives; see the [Roadmap](docs/product-specs/recipe-mcp.md#19-roadmap).
 
 ## Level 4: contributor setup
 
-Read [AGENTS.md](AGENTS.md) (identical to `CLAUDE.md`) for the architecture
+Read [AGENTS.md](AGENTS.md) (`CLAUDE.md` imports it) for the architecture
 boundaries. In short: adapters are thin, services hold the workflow, domain code is
 deterministic, and `providers/` is the only place a model is called.
 

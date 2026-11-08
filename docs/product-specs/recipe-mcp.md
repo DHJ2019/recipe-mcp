@@ -4,45 +4,13 @@
 **Status:** Draft v3.5  
 **Primary objective:** Learn MCP by building a useful shared household recipe assistant  
 **Initial clients:** Telegram (shared household group), Codex, and Claude Code  
-**Repository:** Private Git repository initially; public release after the checklist in Section 21  
+**Repository:** Developed in a private repository. A public copy, `DHJ2019/recipe-mcp`, is published from it by hand  
 **Runtime:** Python 3.13 on an always-on Mac mini  
 **Names:** Alex and Sam are placeholders for the two household members throughout this document.
 
 ---
 
-## 0. Changes in v3.5
-
-- **Every food on an ingredient line counts.** A line that names more than one food ("2 chicken thighs, cut into cubes, or 8 shrimp") stores one ingredient per food, and the recipe carries every food type they need. Alternatives count: "chicken or vegetable stock" makes a recipe omnivore. Extra foods are named by the food word itself (`shrimp`, `cod`).
-- **Food types are visible.** Recipes and recommendations report `contains` (meat, fish, shellfish, dairy, egg), the reason behind the dietary label; Telegram shows it next to the diet ("omnivore (meat, shellfish)").
-- **People can correct an ingredient's food types for one recipe** through `correct_recipe` `field_updates.food_types` (e.g. `{"oyster mushroom": []}`). The correction overrides the lexicon for that recipe only, re-runs the dietary rules and becomes a regression case. Dietary suitability still cannot be set directly. New table `recipe_ingredient_food_types` (migration `0002`).
-- **"Can be made" diets.** Besides the strict dietary label, a recipe can reach a stricter diet through choices its own ingredient lines state: an "or" between foods ("chicken or vegetable broth"), or a line marked optional or used as a garnish ("for serving", "for topping"). Nothing is inferred: a recipe that only says "chicken broth" is never offered as vegan. A dietary request returns exact matches first, then recipes that reach the diet through stated choices, each with `adapted_for` and `diet_swaps` ("vegan if you use vegetable broth"). `get_recipe` reports `can_be_made`.
-- **A food type counts only when it is listed.** Nothing is assumed from a dish name: dumplings take their food type from a stated filling ("pork dumplings" is meat, "potsticker dumplings" has none), and mayonnaise and aioli are not egg unless egg is listed.
-- **Excluding a food type.** `excluded_ingredients` accepts whole food types (dairy, egg, meat, fish, shellfish, seafood) as well as ingredients, so "nothing with egg" excludes egg noodles and mayonnaise, not only eggs. A food type counts only when an ingredient carrying it is listed: a recipe with pierogies is not an egg dish unless egg is on the list. Stated choices apply as for diets ("no dairy if you leave out parmesan").
-- **`recommend_recipes` gains `main_ingredient`,** a hard filter on what the dish is built around: an ingredient ("mushroom") or a group (beans/legumes, fish, seafood, shellfish, meat, poultry). The primary-ingredient facet decides; a recipe with no primary ingredient yet falls back to its title and ranks below labelled matches.
-- **`make refresh-dietary`** re-parses stored ingredient lines and re-runs the dietary rules after the parser or lexicons change. It rewrites only ingredients and `dietary_suitability`; `ARGS=--dry-run` lists the recipes that would change.
-- Parser fixes found in the WhatsApp backfill: leading cut descriptors ("bone-in, skin-on chicken thighs"), packing phrases ("sardines packed in olive oil"), accented names ("crème fraîche"), and look-alike words (oyster mushrooms, butter beans, cream of tartar) no longer flagged as animal foods.
-
-## 0a. Changes in v3.4
-
-- **Claude Code is the brain.** No hosted model API is called by the application. Semantic work (interpreting a chat message, parsing an informal recipe, proposing classifications, composing a reply) is done by the MCP *client* agent: Claude Code or Codex when a person is at a terminal, and a headless `claude -p` run when a Telegram message arrives. The MCP server is fully deterministic and needs no API key. `MODEL_PROVIDER=none` is the default; `openai` and `fake` remain available for the Phase 2 comparison.
-- `save_recipe` accepts structured fields (`title`, `ingredients`, `total_minutes`, `servings`, `classifications`) so an agent that has already parsed the text can save without a server-side model. Free text is still accepted when a model provider is configured.
-- `correct_recipe` gains `proposed_by_agent`: with it set, facet values are stored as a model-grade proposal (`source: model`, `model_version: agent`) rather than a user-confirmed correction, and no regression case is written. This is how an agent classifies a recipe the server extracted from a URL.
-- Recipes saved without any classification proposal are stored with rule-derived facets only and flagged `needs_review`; the server's instructions tell the agent to classify them.
-- The Telegram host talks to the Bot API directly over HTTPS (`getUpdates` long polling, `sendMessage`), replacing the `python-telegram-bot` dependency named in v3.3. The host resolves ratings, reply-to references, ordinal references and time corrections deterministically and only invokes the brain for everything else.
-- The brain contract: the host passes the member key, the last turns and the last result list; the agent must answer in plain text and end with a `RECIPES:` line listing the recipe ids it mentioned, which the host strips and stores as conversation state.
-- New `.env` keys: `BRAIN` (`claude-code` or `none`), `CLAUDE_CODE_BIN`, `BRAIN_MODEL`, `BRAIN_TIMEOUT_SECONDS`, `BRAIN_MAX_TURNS`.
-- Unattended use of a Claude subscription through `claude -p` is the household's own arrangement with Anthropic; the repository documents the setup and does not embed credentials. A local model (Ollama) remains the fallback brain if that arrangement changes.
-
-## 0b. Changes in v3.3
-
-- Telegram replaces WhatsApp as the MVP messaging channel. One shared Telegram group containing Alex, Sam, and the bot replaces two separate bot conversations.
-- No public webhook or tunnel in the MVP. The Telegram bot uses long polling.
-- The existing WhatsApp recipe conversation is still imported from a chat export, and the import is idempotent so periodic re-exports can be repeated.
-- A WhatsApp Business sender is a deferred decision (Section 23), not an MVP dependency.
-- New `correct_recipe` MCP tool so corrections work through the same interface as every other channel.
-- Member identity for MCP clients, ordinal references (“the second one”), conversation state, staples, the confidence threshold, unsupported links, backfill attribution, private evaluation data, and message-length limits are now specified.
-- New Section 19A covers running the service on the Mac mini.
-- Unused schema fields (`diners`, `hands_on_minutes`) removed.
+Changes between spec versions are in [docs/decisions.md](../decisions.md), one line per decision.
 
 ---
 
@@ -151,47 +119,7 @@ A WhatsApp Business sender can be registered later without Meta business verific
 
 ## 6. Simplified Architecture
 
-```text
-Alex / Sam personal Telegram accounts
-                 |
-                 v
-        Telegram Bot API (long polling; outbound only)
-                 |
-                 v
-     Telegram agent host (Python, launchd service on Mac mini)
-     - single hosted model
-     - MCP client
-     - per-chat conversation state
-                 |
-             stdio MCP
-                 |
-                 v
-         Recipe MCP server
-                 |
-        shared application services
-          /          |          \
-         v           v           v
-      SQLite     NYT fetcher    Model client
-                 HTTP first     one provider
-                 Playwright
-                 fallback
-
-Codex / Claude Code --------> Recipe MCP server over stdio
-Optional iOS Shortcut ------> POST /save (Tailscale only)
-```
-
-### Architectural decisions
-
-- One Python repository and one Python package
-- SQLite in WAL mode for the personal, low-volume MVP
-- A repository interface isolates persistence so Postgres can replace SQLite later if needed
-- Telegram Bot API through `python-telegram-bot` using long polling; no inbound network exposure
-- HTTP plus schema.org JSON-LD for the normal NYT fetch path
-- Python Playwright with a persisted dedicated browser profile only when authentication is required
-- One `ModelClient` interface with one hosted multimodal implementation in Phase 1
-- MCP over stdio for local Codex and Claude Code clients
-- The Telegram host maintains a local MCP client session and uses the same tool contracts
-- The Telegram host and any MCP client each spawn their own MCP server process; SQLite WAL mode handles the resulting low-concurrency access
+The architecture diagram, the decisions that shape the code and the layers are in [ARCHITECTURE.md](../../ARCHITECTURE.md).
 
 ---
 
@@ -733,61 +661,7 @@ Rows are deleted on expiry. This table is the only place conversation state is s
 
 ## 16. Repository Structure
 
-```text
-recipe-mcp/
-├── src/recipe_mcp/
-│   ├── domain/                 # recipes, dietary rules, ranking
-│   ├── services/               # ingestion, categorization, recommendation, corrections
-│   ├── adapters/
-│   │   ├── mcp/                # MCP server and schemas
-│   │   ├── telegram/           # bot host, long polling, MCP client session
-│   │   ├── shortcut/           # optional POST /save endpoint (Tailscale only)
-│   │   └── nyt/                # HTTP and Playwright import
-│   ├── providers/              # single baseline ModelClient
-│   ├── db/                     # repositories and migrations
-│   ├── settings.py             # typed environment configuration and validation
-│   └── cli/                    # import, review, doctor commands
-├── migrations/
-├── tests/
-│   ├── unit/
-│   ├── contract/
-│   ├── integration/
-│   └── fixtures/               # synthetic recipes, redacted export sample
-├── evals/
-│   ├── recipes/                # synthetic recipes and staples.yaml
-│   ├── queries/
-│   ├── images/
-│   └── approved_results/
-├── deploy/
-│   ├── com.recipe-mcp.telegram.plist   # launchd daemon
-│   └── README.md               # Mac mini setup
-├── scripts/
-├── .github/workflows/ci.yml
-├── AGENTS.md
-├── CLAUDE.md
-├── Makefile
-├── pyproject.toml
-├── uv.lock
-├── .env                        # generated locally; never committed
-├── .env.example
-├── .gitignore
-├── .private/                   # ignored exports, browser profile, temporary media, private evals
-├── README.md
-├── SECURITY.md
-└── LICENSE
-```
-
-### Repository rules
-
-- `AGENTS.md` and `CLAUDE.md` point to the same canonical architecture and commands.
-- No business logic in Telegram, shortcut, or MCP adapters.
-- No direct model calls outside `providers/`.
-- All configuration is loaded and validated through `src/recipe_mcp/settings.py`; application code must not read environment variables directly.
-- Every MCP tool schema has a contract test.
-- Every bug fix adds a regression test.
-- Database migrations are additive and immutable after release.
-- Prompts and evaluation datasets are versioned.
-- Secrets, browser sessions, Telegram media, and user exports are never committed.
+The repository tree is in [ARCHITECTURE.md](../../ARCHITECTURE.md). The rules enforced in review are in [AGENTS.md](../../AGENTS.md).
 
 ### Local environment and secret handling
 
@@ -999,128 +873,66 @@ Dietary contradictions have near-zero tolerance. Subjective facets such as “co
 
 ---
 
-## 19. Execution Preflight and Build Sequence
+## 19. Roadmap
 
-### Build readiness check
+This is the backlog. New ideas go here with a tag instead of being built unasked. An idea is written into the body of this spec before it is built, and then leaves this section.
 
-Before writing application code, Codex or Claude Code must confirm:
+- `follow-up`: agreed and wanted, next in line.
+- `idea`: worth exploring, needs a decision before any work.
+- `ops`: running and maintaining the always-on Mac, not product features.
+- `deferred`: consciously parked. These are listed in Section 23.
 
-1. **Repository target:** the empty local folder in which the Git repository will be created.
-2. **Baseline model:** OpenAI or Anthropic, plus the initial model name. Do not request the API key in chat.
-3. **Household seed data:** the private WhatsApp export path, if available. The export must be stored under `.private/` or another ignored local path.
-4. **Acceptance data:** the initial query set and tuna-quinoa-salad fixture are approved, or any requested changes are recorded.
-5. **Toolchain:** supported Python, `uv`, Git, Make, and any later Playwright dependencies are available.
+### How it was staged
 
-The agent then initializes Git, creates the repository structure, writes `.gitignore` and `.env.example`, creates the local `.env`, and verifies that `.env` and `.private/` are ignored before any secret or household data is added.
+The MVP was built in four gated stages, all done. Stage 0 collected the seed and acceptance data (the WhatsApp export, the first query set, the tuna-salad fixture). Stage 1 built the offline core: schema, five MCP tools, importers, categorization, recommendation, corrections, tests, evals and CI. Stage 2 added live NYT ingestion and the idempotent WhatsApp backfill. Stage 3 added the Telegram group, allowlists and member mapping, and the launchd daemon that survives a reboot. Git history holds the original stage plans.
 
-Preflight commands must include equivalent checks for:
+### Next stages
 
-```text
-git check-ignore .env
-git check-ignore .private/whatsapp-export.txt
-make setup
-make test
-make lint
-make typecheck
-```
+**Photo input** `idea`. "What can we make from this fridge photo?" (Section 13). Telegram `getFile`, temporary storage under `.private/`, ingredient extraction by the brain, confirmation of uncertain items, then `recommend_recipes`. Raw images are deleted after processing. Gate: a fridge or pantry photo produces three recommendations based only on confirmed ingredients.
 
-Do not place secrets in the build prompt or specification. After scaffolding, the user adds credentials directly to the local `.env`. NYT authentication occurs interactively in the dedicated Playwright browser profile; the application retains the session locally rather than storing an NYT password. The Telegram bot token is added to `.env` after the user creates the bot through BotFather.
+**Real-use pilot** `follow-up`. Use the assistant for about two weeks or 20 to 30 recommendation requests. Review failed searches, corrections, selected recipes and missing categories. Gate: evidence decides whether persistent pantry state, shopping lists, voice notes, a WhatsApp channel or more taxonomy are justified.
 
-If the repository path or baseline-model choice is missing, the agent must ask one focused question and stop before generating application code. If the WhatsApp export or live credentials are unavailable, the agent may still scaffold the repository and complete the offline core using synthetic fixtures and mocked providers. It must clearly state that household categorization, live NYT ingestion, model behavior, or Telegram integration has not yet been validated, as applicable.
+**Multi-model experiment** `idea`. Freeze the baseline. Substitute one task at a time with smaller hosted or local models: ingredient normalization, recipe categorization, query interpretation, photo recognition. Compare quality, latency and cost on the same approved evaluation set. Never change prompts, taxonomy and models at the same time.
 
-**Preflight gate:** Git is initialized; `.env.example` is committed; local `.env` and `.private/` are confirmed ignored; offline setup succeeds; and missing live inputs are explicitly recorded without blocking offline development.
+### Follow-ups
 
-### Stage 0 — Seed and acceptance data
+**Fill in recipes linked from other sites** `follow-up`. Only NYT Cooking links are read. Links to other sites are saved as `other` stubs with a title and URL only, so cuisine, dish type and ingredient filters never match them. A sample of saved non-NYT links showed only about one in ten pages carried standard recipe data. About half loaded with none, about a third refused automated requests or were dead, and videos and social posts never carry it. Three levels:
 
-- Export current WhatsApp recipe conversation.
-- Extract representative recipe links.
-- Approve the first query set and tuna-salad expected output.
+1. Simple, planned first. Parse Recipe JSON-LD from any site. Add a generic fetcher that reuses the title fetcher's protections (public addresses only, checked on every redirect, size cap), fall back to today's stub, and add a backfill command that retries existing stubs. Prerequisite: the title fetcher checks a host's addresses and then connects in a second DNS lookup, so a hostile DNS server could answer differently (DNS rebinding). Before fetching whole pages, connect only to the checked address, keeping the host name for TLS and the `Host` header, on every redirect.
+2. Smart. Have the brain extract recipes from pages without structured data. This reopens a door the security review closed, because the bot's Claude Code has no web access. A safe design has the server fetch and strip the page to plain text, pass only that as clearly marked untrusted data, and store a `needs_review` draft. Needs its own spec and security pass.
+3. Sites that refuse automated requests. Only a signed-in browser per site, as with NYT. Not worth it until a specific site matters.
 
-**Gate:** fixtures and expected results exist before application generation.
+Videos and social posts stay stubs, classified from the title and marked `needs_review`. This lifts the "recipe sites beyond NYT Cooking" deferral, so Section 23 changes first. Open question: is level 2 worth the extra attack surface once level 1 is in daily use?
 
-### Stage 1 — One-shot core repository
+**Warn before the Claude Code token expires** `follow-up` `ops`. `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` lasts one year. When it lapses the bot only says "Sorry, I couldn't work that out." Record the creation date in `.env`, have `make doctor` warn 30 days ahead, and make the brain's 401 produce a clear log line.
 
-Build the repository scaffolding, SQLite schema, model interface, five MCP tools, NYT fixture importer, personal-recipe importer, categorization workflow, deterministic recommendation logic, correction flow, tests, eval runner, CI, and documentation.
+**Free-form household tags** `follow-up`. The controlled taxonomy cannot hold personal labels ("Sam's birthday", "freezer-friendly", "guests"). Spec first, then a tags table, `save_recipe` and `correct_recipe` support, and a `tag` filter on `recommend_recipes`.
 
-**Gate:** a stored fixture and tuna salad can be saved, categorized, corrected, retrieved, and recommended through an MCP client with all offline tests passing.
+### Ideas
 
-### Stage 2 — Live NYT ingestion and historical backfill
+**Learn from the household over time** `idea`. Today the assistant adapts only through deterministic signals: ratings change ranking, recent cooking is pushed down, corrections are permanent. The brain starts fresh on every message. In order of value: remember stated preferences as hard rules per member ("no pork on weeknights"), applied by the ranking filters; feed recent corrections to the brain as examples when it classifies; grow the taxonomy from repeated `other` proposals with a review step; record which recommendation was chosen and tune ranking weights. Open question: which of these would the household notice day to day?
 
-- Add HTTP JSON-LD fetch.
-- Add authenticated Playwright fallback.
-- Import and categorize the WhatsApp export.
-- Review the categorization report.
-- Re-run the import to confirm it is idempotent.
+**Chat with the recipes from the Claude app** `idea`. Longer conversations and planning in the Claude app, while Telegram stays the quick shared channel. Serve the MCP server over streamable HTTP behind authentication and a public address (for example a Cloudflare Tunnel, since Claude connects to custom connectors from the cloud), then add it once as a custom connector. Open questions: whose identity those writes use, whether Sam gets a connector, and which host.
 
-**Gate:** representative historical recipes are stored with approved classifications and duplicates are prevented.
+**Linux or cloud hosting via systemd** `idea`. The daemon uses launchd, so the bot only runs on a Mac. A Linux box or a small cloud server (about $5 to $7 a month) would restart unattended after a power cut, where a FileVault Mac waits for its password. Needs a systemd unit beside the plist, setup docs, and moving `data/recipes.db`, `.env` and `.private/`. The NYT browser profile is the awkward part. Open question: is unattended recovery worth a monthly bill and data on a rented machine?
 
-### Stage 3 — Telegram text experience
+**Keep the recipes in Google Drive** `idea`. Drive stores files but runs nothing, and a live SQLite file in a synced folder can be corrupted. Realistic versions: a nightly read-only backup into Drive; a mirrored Google Sheet rebuilt after each change; or hosted Postgres if the server moves to the cloud. Open question: is the goal backup, sharing, or running without the Mac?
 
-- Create the bot, disable privacy mode, create the household group.
-- Add user and chat allowlists and member mapping.
-- Support save, query, correction, and rating messages, including reply-to and ordinal references.
-- Run as a launchd daemon on the Mac mini (Section 19A).
+**Review recipes from Claude Code on the web** `idea`. Cloud sessions see only the repository, and the live database is deliberately not in Git. A nightly YAML export of every recipe into a private data repository, plus an import step for reviewed changes, would allow it. Or expose the MCP server to cloud sessions once the bot runs on a server. Open questions: is household data acceptable in a private GitHub repository, and how to avoid conflicts with the bot's writes.
 
-**Gate:** Alex can save a recipe from the NYT app share sheet and Sam can retrieve it in the same group, with the service surviving a Mac mini reboot.
+**Offline export for the phone** `idea`. `recipe-mcp export` writes one searchable HTML or Markdown file to iCloud Drive or Google Drive, refreshed nightly. Read-only, no recommendations.
 
-### Stage 4 — Photo input
+**Local model fallback brain (Ollama)** `idea`. If unattended use of the Claude subscription stops being an option, the bot needs a brain on the Mac itself. A second brain behind `BRAIN=ollama`, calling the same MCP server.
 
-- Add temporary media handling.
-- Add structured image ingredient extraction.
-- Confirm uncertain ingredients.
-- Delete raw images after processing.
+### Ops
 
-**Gate:** a fridge or pantry photo produces three recommendations based only on confirmed ingredients.
-
-### Stage 5 — Real-use pilot
-
-Use the assistant for approximately two weeks or 20–30 recommendation requests. Review failed searches, corrections, selected recipes, and missing categories.
-
-**Gate:** evidence determines whether persistent pantry state, shopping lists, voice notes, a WhatsApp channel, or additional taxonomy are justified.
-
-### Stage 6 — Multi-model experiment
-
-Freeze the single-model baseline. Substitute one task at a time with smaller hosted or local models:
-
-- ingredient normalization
-- recipe categorization
-- query interpretation
-- photo recognition
-
-Compare quality, latency, and cost using the same approved evaluation set. Do not change prompts, taxonomy, and models simultaneously.
+**Log file naming** `ops`. The bot writes its log lines to `/Library/Logs/recipe-mcp/telegram.err.log`, and `telegram.log` stays empty. Either log to stdout or rename the paths so the obvious file is the useful one.
 
 ---
 
 ## 19A. Running on the Mac mini
 
-The Mac mini is the only runtime host. Everything below is documented in `deploy/README.md` and automated by `make install-daemon` where practical.
-
-### Machine
-
-- macOS with Python 3.13 installed through `uv`.
-- Energy settings: never sleep, wake for network access, restart automatically after a power failure.
-- Automatic login is not required; the bot runs as a LaunchDaemon, not a LaunchAgent, so it starts without a user session.
-- Tailscale installed if the optional shortcut endpoint or remote MCP access is wanted. Nothing else is exposed to the network.
-
-### Processes
-
-- `com.recipe-mcp.telegram` LaunchDaemon runs `uv run --env-file .env recipe-mcp serve-telegram` from the repository directory with `KeepAlive` and `RunAtLoad`. Logs go to `/Library/Logs/recipe-mcp/`.
-- The MCP server is not a daemon. The Telegram host spawns it over stdio, and Codex or Claude Code spawn their own instance on demand.
-- Long polling means the daemon only makes outbound HTTPS requests to Telegram. No inbound port, no tunnel, no webhook secret.
-- The host stores the next `getUpdates` offset in the `app_state` table (migration `0003`) before handling each update. After a restart it resumes from there, so no message is answered twice, and a message that crashes the host is skipped rather than replayed on every restart.
-
-### NYT session
-
-- The dedicated Playwright profile lives at `NYT_BROWSER_PROFILE_PATH`. Login is done once by running `make nyt-login`, which opens a headed browser for a manual sign-in and closes it when the session cookie is present.
-- `make doctor` checks the session and reports expiry without printing cookies.
-
-### Operations
-
-- `make doctor` is the first thing to run after any change or reboot. It also warns when `.env`, `.private/`, the database or its folder can be read by other accounts, naming the path, its mode and the `chmod` that fixes it; it never reads the files.
-- `make smoke` sends one test message to the group and expects a reply within 30 seconds.
-- Database backups: `recipe-mcp backup` (`make backup`) copies the database with SQLite’s online backup API, which is safe while the bot is running, to `BACKUP_DIR` (default `.private/backups/`) as `recipes-YYYY-MM-DD.db`. It writes to a temporary file, runs `PRAGMA integrity_check` on the copy and only then renames it into place, sets it to mode 600, and keeps the newest `BACKUP_KEEP` files (default 14). A second LaunchDaemon, `com.recipe-mcp.backup`, runs it nightly at 03:17 as the same user; `make install-daemon` renders both plists. `make doctor` warns when there is no backup or the newest is more than 36 hours old.
-- Backups sit on the same disk, so they cover mistakes and a damaged database file, not a failed disk. Time Machine or another off-machine copy of `.private/backups/` covers that.
-- Upgrades: `git pull`, `uv sync`, `make test`, `sudo launchctl kickstart -k system/com.recipe-mcp.telegram`.
+The always-on Mac is the only runtime host. How to install, run, back up and restore it is in [deploy/README.md](../../deploy/README.md), and `make install-daemon` automates it where practical.
 
 ---
 
@@ -1144,24 +956,7 @@ The Mac mini is the only runtime host. Everything below is documented in `deploy
 
 ## 21. Public Release Checklist
 
-- [ ] All unit, contract, and integration tests pass
-- [ ] Initial synthetic eval results documented
-- [ ] Live smoke-test procedure documented
-- [ ] No secrets, private exports, private evals, or member IDs in Git history
-- [ ] `.env.example` complete
-- [ ] Local `.env` and `.private/` confirmed ignored by Git
-- [ ] Configuration validation fails safely without revealing secret values
-- [ ] `AGENTS.md` and `CLAUDE.md` aligned
-- [ ] README supports setup on a fresh Mac
-- [ ] `deploy/README.md` tested on a fresh Mac mini
-- [ ] Fresh-clone user can complete the synthetic-data MCP demonstration
-- [ ] Codex and Claude Code MCP configuration examples have been tested
-- [ ] SECURITY.md documents Telegram, browser-session, and local-MCP risks
-- [ ] Dependency and secret scans completed
-- [ ] Sample data is synthetic or licensed for publication
-- [ ] MIT license included
-- [ ] Personal identifiers and household data absent from repository
-- [ ] Repository visibility switched from private to public
+The release checklist moved to the publish script work, where each box is ticked as the release is prepared. It is tracked with the factory's issues, outside this file, so this public spec does not carry a list that is never ticked.
 
 ---
 
@@ -1186,7 +981,7 @@ The experiment is successful when:
 
 ## 23. Deferred Decisions
 
-Open ideas and agreed follow-ups that are not yet specified live in `IDEAS.md`, tagged `follow-up`, `idea`, `ops` or `deferred`. An idea is written into this spec before it is built.
+Open ideas and agreed follow-ups that are not yet specified live in the Roadmap (Section 19). The decisions below are consciously parked.
 
 - Whether to add a WhatsApp Business sender as a second channel after the pilot (requires Meta Business Portfolio, public webhook, tunnel, per-message cost, and the 24-hour reply window; no business verification needed for a reply-only bot)
 - Whether remote MCP access from a laptop over Tailscale is worth the setup
@@ -1196,9 +991,6 @@ Open ideas and agreed follow-ups that are not yet specified live in `IDEAS.md`, 
 - Whether shopping-list generation is used frequently enough to add as an MCP tool
 - Whether voice-note transcription belongs in the application
 - Which individual tasks merit local-model replacement after baseline evaluation
+- Whether to build the iOS Shortcut save endpoint: a share-sheet Shortcut posting a URL to a local `POST /save`, reachable only over Tailscale (Section 5). `adapters/shortcut/` is an empty stub and the `SHORTCUT_*` settings in `.env.example` do nothing yet
 - Whether a private web reading interface is necessary beyond Telegram summaries and source links
 - Whether the Telegram host needs rate limits or a daily budget on brain runs (today it handles one message at a time and only allowlisted members reach it)
-
----
-
-*Spec version 3.5 — as 3.4 plus food types per ingredient and a main-ingredient filter; 3.4: agent-as-brain MVP (Claude Code), deterministic MCP server; otherwise as 3.3: single-model MVP on a shared Telegram group with long polling, Mac mini deployment, corrections through MCP, member identity, conversation state, idempotent WhatsApp backfill, and multi-model evaluation.*

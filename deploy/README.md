@@ -1,8 +1,8 @@
 # Running on an always-on Mac
 
 The bot needs an always-on Mac (Mac mini, iMac or a laptop that stays awake); it is the
-only runtime host (SPEC.md section 19A). The daemon uses launchd, so this guide is macOS
-only; Linux or cloud hosting is an idea in IDEAS.md. The Telegram host runs as
+only runtime host. The daemon uses launchd, so this guide is macOS
+only; Linux or cloud hosting is an idea in the [spec's Roadmap](../docs/product-specs/recipe-mcp.md#19-roadmap). The Telegram host runs as
 a LaunchDaemon so it starts without a user session; the MCP server is not a daemon and
 is spawned over stdio by the Telegram host, Codex or Claude Code on demand.
 
@@ -44,6 +44,9 @@ It is a LaunchDaemon, so it starts at boot without anyone logging in, but the pl
 Claude Code login owned by your account; running it as root would leave root-owned
 database files that your own Claude Code sessions could no longer write.
 `KeepAlive` restarts the host if it exits; `RunAtLoad` starts it at boot.
+The host stores the next Telegram update offset in the database (`app_state`) before it
+handles each update. After a restart it resumes from there, so no message is answered
+twice, and a message that crashes the host is skipped rather than replayed.
 
 **Claude Code authentication at boot.** Claude Code keeps its login in the macOS
 keychain, which stays locked until you log in. So that the bot works straight after a
