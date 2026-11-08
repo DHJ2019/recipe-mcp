@@ -956,23 +956,7 @@ The always-on Mac is the only runtime host. How to install, run, back up and res
 
 ## 21. Public Release Checklist
 
-- [ ] All unit, contract, and integration tests pass
-- [ ] Initial synthetic eval results documented
-- [ ] Live smoke-test procedure documented
-- [ ] No secrets, private exports, private evals, or member IDs in Git history
-- [ ] `.env.example` complete
-- [ ] Local `.env` and `.private/` confirmed ignored by Git
-- [ ] Configuration validation fails safely without revealing secret values
-- [ ] README supports setup on a fresh Mac
-- [ ] `deploy/README.md` tested on a fresh Mac mini
-- [ ] Fresh-clone user can complete the synthetic-data MCP demonstration
-- [ ] Codex and Claude Code MCP configuration examples have been tested
-- [ ] SECURITY.md documents Telegram, browser-session, and local-MCP risks
-- [ ] Dependency and secret scans completed
-- [ ] Sample data is synthetic or licensed for publication
-- [ ] MIT license included
-- [ ] Personal identifiers and household data absent from repository
-- [ ] Repository visibility switched from private to public
+The release checklist moved to the publish script work, where each box is ticked as the release is prepared. It is tracked with the factory's issues, outside this file, so this public spec does not carry a list that is never ticked.
 
 ---
 
